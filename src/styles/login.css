@@ -1,0 +1,166 @@
+.login-container {
+  display: flex;
+  height: 100vh;
+}
+
+/* LEFT */
+.left {
+  width: 40%;
+  background: #f3d9b1;
+  padding: 80px 60px; /* kiri lebih lega */
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start; /* 🔥 bikin konten rata kiri */
+  text-align: left;
+}
+
+.left h1 {
+  color: #c12a13;
+  font-size: 40px;
+  line-height: 1.4;
+  margin: 0;
+  text-align: left;
+}
+
+.left p {
+  margin-top: 15px;
+  color: #c12a13;
+  font-size: 18px;
+  text-align: left;
+}
+
+/* RIGHT */
+.right {
+  width: 60%;
+  background-size: cover;
+  background-position: center;
+}
+
+.overlay {
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0,0,0,0.3);
+}
+
+/* CARD */
+.login-card {
+  width: 350px;
+  padding: 30px;
+  border-radius: 20px;
+  text-align: center;
+
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(10px);
+
+  border: 2px solid #e77838;
+}
+
+.logo {
+  width: 200px;
+  margin-bottom: 10px;
+}
+
+.login-card h2 {
+  margin-bottom: 20px;
+}
+
+/* INPUT */
+.login-card label {
+  display: block;
+  text-align: left;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.login-card input {
+  width: 100%;
+  padding: 10px;
+  margin-top: 5px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+/* PASSWORD */
+.password-field {
+  position: relative;
+}
+
+.password-field span {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  cursor: pointer;
+}
+
+/* LINK */
+.forgot {
+  display: block;
+  text-align: right;
+  font-size: 12px;
+  color: blue;
+  margin-top: 5px;
+}
+
+/* BUTTON */
+.login-btn {
+  width: 100%;
+  margin-top: 20px;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: #ff7f55;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.login-btn:hover {
+  background: #e66a45;        /* sedikit lebih gelap */
+  transform: translateY(-2px); /* efek naik */
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.login-btn:active {
+  transform: scale(0.98); /* efek ditekan */
+}
+
+/* REGISTER */
+.register-text {
+  margin-top: 10px;
+  font-size: 13px;
+}
+
+.register-text span {
+  color: blue;
+  cursor: pointer;
+}
+
+.forgot {
+  display: block;
+  text-align: right;
+  font-size: 12px;
+  color: blue;
+  margin-top: 5px;
+  text-decoration: none;
+  transition: 0.3s;
+}
+
+.forgot:hover {
+  color: #ff7f55;
+  text-decoration: underline;
+}
+
+.register-text span {
+  color: blue;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.register-text span:hover {
+  color: #ff7f55;
+  text-decoration: underline;
+}
