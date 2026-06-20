@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { CirclePlus, Search } from "lucide-react";
 import logo from "../assets/logo.png";
 import "../styles/dashboard.css";
+import api from "../utils/axiosConfig"; // Menggunakan Axios instance
 
 function DashboardUser() {
   const navigate = useNavigate();
@@ -19,138 +20,101 @@ function DashboardUser() {
 
   // State Modals & Selections
   const [selectedReport, setSelectedReport] = useState(null);
-  const [showFoundModal, setShowFoundModal] = useState(false);
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [zoomedImage, setZoomedImage] = useState(null);
 
-  // State Laporan & Statistik Hasil Gabungan DB
+  // State Laporan & Statistik
   const [reports, setReports] = useState([]);
-  const [stats, setStats] = useState({ totalLost: 0, totalFound: 0 });
-
-  // State Form Inputs
-  const [foundForm, setFoundForm] = useState({
-    spesifikasi: "",
-    lokasi: "",
-    catatan: "",
-    image: null,
+  const [stats, setStats] = useState({
+    totalLost: 0,
+    totalFound: 0,
+    successfulClaims: 0
   });
 
+  // State Form Inputs (Khusus Klaim sesuai alur baru)
   const [claimForm, setClaimForm] = useState({
-    spesifikasi: "",
     catatan: "",
     image: null,
   });
-
-  const [previewFoundImage, setPreviewFoundImage] = useState(null);
   const [previewClaimImage, setPreviewClaimImage] = useState(null);
 
-  // 1. Ambil Data Profil User dari Backend
+  // --- UNIFIED USEEFFECT: Fetch Semua Data Saat Pertama Kali Muat ---
   useEffect(() => {
-    const fetchUserProfile = async () => {
+    const fetchDashboardData = async () => {
+      
+      // 1. Ambil Data Profil User
       try {
         const userId = localStorage.getItem("userId"); 
-        if (!userId) {
-          console.warn("User ID tidak ditemukan di localStorage. Silakan login kembali.");
-          return;
-        }
-
-        const response = await fetch(`http://localhost:5000/api/profile/${userId}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json"
-          }
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          
-          setProfileName(data.nama || "User");
-          setProfileImage(data.fotoProfil || null);
-
-          localStorage.setItem("profileName", data.nama || "User");
-          if (data.fotoProfil) {
-            localStorage.setItem("profileImage", data.fotoProfil);
-          } else {
-            localStorage.removeItem("profileImage");
+        if (userId) {
+          const response = await api.get(`/api/profile/${userId}`);
+          const data = response.data;
+          if (data) {
+            setProfileName(data.nama || "User");
+            setProfileImage(data.fotoProfil || null);
+            localStorage.setItem("profileName", data.nama || "User");
+            if (data.fotoProfil) {
+              localStorage.setItem("profileImage", data.fotoProfil);
+            } else {
+              localStorage.removeItem("profileImage");
+            }
           }
         }
       } catch (error) {
-        console.error("Gagal mengambil data profil dari database lokal:", error);
+        console.error("Gagal mengambil data profil:", error);
       }
-    };
 
-    fetchUserProfile();
-  }, []);
-
-  // 2. AMBIL DAN GABUNGKAN DATA (LOST ITEMS & FOUND ITEMS) DARI DATABASE
-  useEffect(() => {
-    const fetchAllReportsFromDB = async () => {
+      // 2. Ambil Data Statistik Global (Mengatasi Masalah Nilai 0)
       try {
-        // Ambil Data Barang Hilang
-        const resLost = await fetch("http://localhost:5000/api/lost-items");
-        const rawLost = resLost.ok ? await resLost.json() : [];
-        const actualLost = Array.isArray(rawLost) ? rawLost : rawLost.data || rawLost.lostItems || [];
+        const response = await api.get('/api/items/stats');
+        // Mengantisipasi jika data dibungkus .data atau langsung dari response
+        const statsData = response.data?.data || response.data;
+        
+        if (statsData) {
+          setStats({
+            totalLost: statsData.totalLost ?? 0,
+            totalFound: statsData.totalFound ?? 0,
+            successfulClaims: statsData.successfulClaims ?? 0
+          });
+        }
+      } catch (error) {
+        console.error("Gagal mengambil data statistik:", error);
+      }
 
-        // Ambil Data Barang Ditemukan
-        const resFound = await fetch("http://localhost:5000/api/found-items");
-        const rawFound = resFound.ok ? await resFound.json() : [];
-        const actualFound = Array.isArray(rawFound) ? rawFound : rawFound.data || rawFound.foundItems || [];
+      // 3. Ambil 5 Laporan Terbaru dari Database
+      try {
+        const res = await api.get("/api/items?limit=5");
+        const rawItems = res.data?.data || res.data || [];
+        
+        const formattedReports = rawItems.map((item) => {
+          const isHilang = item.type === "hilang";
+          const categoryName = item.Category?.name || item.category || "Lainnya";
 
-        // Update Counter Statistik Dinamis
-        setStats({
-          totalLost: actualLost.length,
-          totalFound: actualFound.length
+          return {
+            id: `${item.type}-${item.id}`,
+            dbId: item.id,
+            name: item.name || "Tanpa Nama",
+            description: item.description || "",
+            category: categoryName,
+            location: item.location || "-",
+            date: item.lost_date ? (item.lost_date.includes("T") ? item.lost_date.split("T")[0] : item.lost_date) : "-", 
+            time: item.lost_time || "-",
+            contact: item.contact || "-",
+            image: item.photo_path ? `http://localhost:5000/public/${item.photo_path.replace(/\\/g, '/')}` : null,
+            status: isHilang ? "Hilang" : "Ditemukan",
+            type: isHilang ? "hilang" : "ditemukan",
+            createdAt: item.createdAt ? new Date(item.createdAt) : new Date()
+          };
         });
 
-        // Format Data Barang Hilang
-        const formattedLost = actualLost.map(item => ({
-          id: `lost-${item.id}`,
-          dbId: item.id,
-          name: item.name || "Tanpa Nama",
-          description: item.description || "",
-          category: item.category || "Lainnya",
-          location: item.location || "-",
-          // Perbaikan: Antisipasi jika format tanggal sudah berwujud string murni YYYY-MM-DD dari MySQL
-          date: item.lost_date ? (item.lost_date.includes("T") ? item.lost_date.split("T")[0] : item.lost_date) : "-", 
-          time: item.lost_time || "-",
-          contact: item.contact || "-",
-          image: item.photo_path ? `http://localhost:5000/${item.photo_path.replace(/\\/g, '/')}` : null,
-          status: "Hilang",
-          type: "hilang",
-          createdAt: item.createdAt ? new Date(item.createdAt) : new Date()
-        }));
-
-        // Format Data Barang Ditemukan
-        const formattedFound = actualFound.map(item => ({
-          id: `found-${item.id}`,
-          dbId: item.id,
-          name: item.name || "Tanpa Nama",
-          description: item.description || "",
-          category: item.category || "Lainnya",
-          location: item.location || "-",
-          // Perbaikan: Antisipasi jika format tanggal sudah berwujud string murni YYYY-MM-DD dari MySQL
-          date: item.found_date ? (item.found_date.includes("T") ? item.found_date.split("T")[0] : item.found_date) : "-", 
-          time: item.found_time || "-",
-          contact: item.contact || "-",
-          image: item.photo_path ? `http://localhost:5000/${item.photo_path.replace(/\\/g, '/')}` : null,
-          status: "Ditemukan",
-          type: "ditemukan",
-          createdAt: item.createdAt ? new Date(item.createdAt) : new Date()
-        }));
-
-        // Satukan dan Urutkan Berdasarkan Waktu Pembuatan (Paling Baru Teratas)
-        const combinedReports = [...formattedLost, ...formattedFound]
-          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()); // Perbaikan: sorting berbasis timestamp milidetik agar akurat
-
-        // Tampilkan semua data gabungan yang berhasil ditarik tanpa dipotong .slice(0, 5) dahulu untuk memastikan data tampil
-        setReports(combinedReports);
-
+        // Urutkan berdasarkan yang paling baru
+        const sortedReports = formattedReports.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        setReports(sortedReports);
       } catch (error) {
-        console.error("Gagal menghubungkan atau memuat data gabungan dari API:", error);
+        console.error("Gagal memuat data laporan:", error);
       }
     };
 
-    fetchAllReportsFromDB();
+    fetchDashboardData();
   }, []);
 
   // Fungsi Search
@@ -171,24 +135,9 @@ function DashboardUser() {
     { title: "Klaim Kunci Motor", status: "Sedang Diverifikasi", time: "1 hari yang lalu" },
   ];
 
-  // Handlers
-  const handleFoundChange = (e) => {
-    setFoundForm({ ...foundForm, [e.target.name]: e.target.value });
-  };
-
+  // Handlers Form Klaim
   const handleClaimChange = (e) => {
     setClaimForm({ ...claimForm, [e.target.name]: e.target.value });
-  };
-
-  const handleFoundUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      alert("Ukuran gambar maksimal 5 MB");
-      return;
-    }
-    setFoundForm({ ...foundForm, image: file });
-    setPreviewFoundImage(URL.createObjectURL(file));
   };
 
   const handleClaimUpload = (e) => {
@@ -202,52 +151,47 @@ function DashboardUser() {
     setPreviewClaimImage(URL.createObjectURL(file));
   };
 
-  const submitFoundForm = async () => {
-    if (!foundForm.image) {
-      alert("Foto barang wajib diupload");
+  const submitClaimForm = async () => {
+    if (!selectedReport || !selectedReport.dbId) {
+      alert("Terjadi kesalahan: ID Item tidak ditemukan.");
+      return;
+    }
+    
+    if (!claimForm.catatan || claimForm.catatan.trim() === "") {
+      alert("Bukti/Informasi wajib diisi secara detail!");
       return;
     }
 
     try {
-      const userId = localStorage.getItem("userId") || 1; // Ambil ID user yang login
-      
-      // Karena mengunggah file gambar, kita wajib menggunakan FormData
       const formData = new FormData();
-      formData.append("userId", userId);
-      formData.append("name", "Barang Ditemukan"); // Atau sesuaikan dengan input nama jika ada
-      formData.append("description", foundForm.catatan || "Tidak ada catatan");
-      formData.append("category", "Lainnya"); // Sesuaikan jika ada input kategori
-      formData.append("location", foundForm.lokasi || "-");
-      formData.append("image", foundForm.image); // Field 'image' harus cocok dengan nama di upload.single() Multer backend
+      formData.append("item_id", parseInt(selectedReport.dbId)); 
+      formData.append("proof_of_ownership", claimForm.catatan); 
 
-      const response = await fetch("http://localhost:5000/api/found-items", {
-        method: "POST",
-        body: formData, // Jangan gunakan headers Content-Type JSON jika mengirim FormData
+      if (claimForm.image) {
+        formData.append("proof_photo_path", claimForm.image);
+      }
+
+      const response = await api.post("/api/claims", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
       });
 
-      if (response.ok) {
-        alert("Laporan penemuan berhasil dikirim ke database!");
-        setShowFoundModal(false);
-        
-        // Reset form setelah sukses
-        setFoundForm({ spesifikasi: "", lokasi: "", catatan: "", image: null });
-        setPreviewFoundImage(null);
-
-        // Jalankan ulang fungsi fetch agar data terbaru langsung muncul tanpa refresh browser
-        window.location.reload(); 
-      } else {
-        const errData = await response.json();
-        alert(`Gagal mengirim laporan: ${errData.message || response.statusText}`);
+      if (response.data.success || response.status === 200 || response.status === 201) {
+        alert("Klaim berhasil dikirim dan sedang diverifikasi!");
+        setShowClaimModal(false);
+        setClaimForm({ catatan: "", image: null });
+        setPreviewClaimImage(null);
+        setSelectedReport(null);
+        window.location.reload();
       }
     } catch (error) {
-      console.error("Error saat mengirim laporan penemuan:", error);
-      alert("Terjadi kesalahan koneksi saat mengirim laporan.");
+      console.error("Error saat mengirim klaim:", error);
+      if (error.response?.data?.errors) {
+        const errorMessages = error.response.data.errors.map(err => err.msg).join("\n");
+        alert(`Gagal mengirim klaim:\n${errorMessages}`);
+      } else {
+        alert(error.response?.data?.message || "Terjadi kesalahan koneksi saat mengirim klaim.");
+      }
     }
-  };
-
-  const submitClaimForm = () => {
-    alert("Klaim berhasil dikirim");
-    setShowClaimModal(false);
   };
 
   return (
@@ -258,7 +202,6 @@ function DashboardUser() {
         <div className="dashboard-topbar">
           <img src={logo} alt="Findora Logo" className="dashboard-logo" />
 
-          {/* INPUT SEARCH */}
           <div className="search-box">
             <input 
               type="text" 
@@ -267,12 +210,7 @@ function DashboardUser() {
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleSearchSubmit} 
             />
-            <Search 
-              size={18} 
-              className="search-icon" 
-              style={{ cursor: "pointer" }}
-              onClick={handleSearchSubmit} 
-            />
+            <Search size={18} className="search-icon" style={{ cursor: "pointer" }} onClick={handleSearchSubmit} />
           </div>
 
           <div className="dashboard-profile" onClick={() => navigate("/profile")}>
@@ -290,7 +228,6 @@ function DashboardUser() {
         {/* MAIN SECTION */}
         <div className="dashboard-main">
           
-          {/* WELCOME BANNER */}
           <section className="welcome-section">
             <h1>Selamat Datang, {profileName}!</h1>
             <p>Temukan barang anda atau bantu sesama hari ini.</p>
@@ -311,9 +248,9 @@ function DashboardUser() {
             {/* LEFT COLUMN */}
             <div className="dashboard-left">
               
-              {/* STATISTIK DINAMIS */}
+              {/* STATISTIK DINAMIS GLOBAL */}
               <section className="stats-card">
-                <h2>Statistik Minggu Ini</h2>
+                <h2>Statistik Keseluruhan</h2>
                 <div className="stats-row">
                   <div className="stat-item">
                     <h3>{stats.totalLost}</h3>
@@ -326,7 +263,7 @@ function DashboardUser() {
                   </div>
                   <div className="divider"></div>
                   <div className="stat-item">
-                    <h3>2</h3>
+                    <h3>{stats.successfulClaims}</h3>
                     <p>Klaim Berhasil</p>
                   </div>
                 </div>
@@ -345,21 +282,16 @@ function DashboardUser() {
                       <div className="dashboard-report-card" key={item.id} onClick={() => setSelectedReport(item)}>
                         <div className="report-image">
                           {item.image ? (
-                            <img 
-                              src={item.image} 
-                              alt={item.name} 
-                              style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "8px" }} 
-                            />
+                            <img src={item.image} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "8px" }} />
                           ) : (
                             <span style={{ fontSize: "28px" }}>📦</span>
                           )}
                         </div>
                         <h3>{item.name}</h3>
-                        <p><strong>Kategori:</strong> {item.category || "Lainnya"}</p>
+                        <p><strong>Kategori:</strong> {item.category}</p>
                         <p><strong>Lokasi:</strong> {item.location}</p>
                         <p><strong>Tanggal:</strong> {item.date}</p>
                         
-                        {/* DINAMIS: Label kelas CSS disesuaikan tipe barang */}
                         <span className={`report-status ${item.type === 'hilang' ? 'status-blue' : 'status-green'}`}>
                           {item.status}
                         </span>
@@ -400,12 +332,7 @@ function DashboardUser() {
             <button className="close-detail" onClick={() => setSelectedReport(null)}>✕</button>
             <div className="detail-image">
               {selectedReport.image ? (
-                <img 
-                  src={selectedReport.image} 
-                  alt={selectedReport.name} 
-                  style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "8px", cursor: "zoom-in" }} 
-                  onClick={() => setZoomedImage(selectedReport.image)}
-                />
+                <img src={selectedReport.image} alt={selectedReport.name} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "8px", cursor: "zoom-in" }} onClick={() => setZoomedImage(selectedReport.image)} />
               ) : (
                 <span style={{ fontSize: "48px" }}>📦</span>
               )}
@@ -416,7 +343,7 @@ function DashboardUser() {
             </div>
 
             <div className="detail-info">
-              <p><strong>Kategori:</strong> {selectedReport.category || "Lainnya"}</p>
+              <p><strong>Kategori:</strong> {selectedReport.category}</p>
               <p><strong>Deskripsi:</strong> {selectedReport.description}</p>
               <p><strong>Lokasi:</strong> {selectedReport.location}</p>
               <p><strong>Tanggal:</strong> {selectedReport.date}</p>
@@ -424,13 +351,12 @@ function DashboardUser() {
               <p><strong>Kontak:</strong> {selectedReport.contact}</p>
             </div>
 
-            {/* AKSI TOMBOL DINAMIS BERDASARKAN STATUS BARANG */}
             {selectedReport.type === "hilang" ? (
-              <button className="detail-action-btn" onClick={() => { setShowFoundModal(true); setSelectedReport(null); }}>
+              <button className="detail-action-btn" onClick={() => setShowClaimModal(true)}>
                 Saya Menemukan Barang Ini
               </button>
             ) : (
-              <button className="detail-action-btn" style={{ backgroundColor: "#28a745" }} onClick={() => { setShowClaimModal(true); setSelectedReport(null); }}>
+              <button className="detail-action-btn" style={{ backgroundColor: "#28a745" }} onClick={() => setShowClaimModal(true)}>
                 Ini Barang Saya (Klaim)
               </button>
             )}
@@ -438,43 +364,30 @@ function DashboardUser() {
         </div>
       )}
 
-      {/* MODAL SAYA MENEMUKAN BARANG */}
-      {showFoundModal && (
-        <div className="detail-modal-bg">
-          <div className="claim-popup">
-            <button className="popup-close" onClick={() => setShowFoundModal(false)}>✕</button>
-            <h2 className="popup-title">Saya Menemukan Barang Ini</h2>
-            <div className="popup-form">
-              <div className="popup-group">
-                <label>Upload Foto Barang (Wajib)</label>
-                <input type="file" accept="image/*" onChange={handleFoundUpload} />
-                {previewFoundImage && <img src={previewFoundImage} alt="Preview" className="claim-preview" />}
-              </div>
-              <div className="popup-group">
-                <label>Informasi / Bukti Penemuan</label>
-                <textarea name="catatan" placeholder="Contoh: saya menemukan barang ini di parkiran kampus 1" value={foundForm.catatan} onChange={handleFoundChange} />
-              </div>
-              <button className="popup-submit-btn" onClick={submitFoundForm}>Kirim Bukti</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL KLAIM BARANG */}
+      {/* MODAL KLAIM BARANG (DINAMIS SEMENTARA SESUAI ALUR BARU) */}
       {showClaimModal && (
         <div className="detail-modal-bg">
           <div className="claim-popup">
-            <button className="popup-close" onClick={() => setShowClaimModal(false)}>✕</button>
-            <h2 className="popup-title">Klaim Barang</h2>
+            <button className="popup-close" onClick={() => { setShowClaimModal(false); setClaimForm({ catatan: "", image: null }); setPreviewClaimImage(null); }}>✕</button>
+            <h2 className="popup-title">
+              {selectedReport?.type === "hilang" ? "Klaim Menemukan Barang" : "Klaim Kepemilikan Barang"}
+            </h2>
             <div className="popup-form">
               <div className="popup-group">
-                <label>Upload Foto (Opsional)</label>
+                <label>Upload Foto Bukti (Opsional)</label>
                 <input type="file" accept="image/*" onChange={handleClaimUpload} />
                 {previewClaimImage && <img src={previewClaimImage} alt="Preview" className="claim-preview" />}
               </div>
               <div className="popup-group">
-                <label>Bukti Kepemilikan</label>
-                <textarea name="catatan" placeholder="Contoh: terdapat stiker anime di belakang barang" value={claimForm.catatan} onChange={handleClaimChange} />
+                <label>
+                  {selectedReport?.type === "hilang" ? "Informasi / Bukti Penemuan" : "Bukti Kepemilikan"} <span style={{color: "red"}}> *</span>
+                </label>
+                <textarea 
+                  name="catatan" 
+                  placeholder={selectedReport?.type === "hilang" ? "Contoh: Saya menemukan barang ini di..." : "Contoh: Terdapat stiker..."} 
+                  value={claimForm.catatan} 
+                  onChange={handleClaimChange} 
+                />
               </div>
               <button className="popup-submit-btn" onClick={submitClaimForm}>Kirim Klaim</button>
             </div>
@@ -484,48 +397,8 @@ function DashboardUser() {
 
       {/* POP-UP LIGHTBOX IMAGE */}
       {zoomedImage && (
-        <div 
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100vw",
-            height: "100vh",
-            backgroundColor: "rgba(0, 0, 0, 0.85)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 9999,
-            cursor: "zoom-out"
-          }}
-          onClick={() => setZoomedImage(null)}
-        >
-          <button 
-            style={{
-              position: "absolute",
-              top: "20px",
-              right: "20px",
-              background: "none",
-              border: "none",
-              color: "white",
-              fontSize: "30px",
-              cursor: "pointer"
-            }}
-            onClick={() => setZoomedImage(null)}
-          >
-            ✕
-          </button>
-          <img 
-            src={zoomedImage} 
-            alt="Fullscreen Preview" 
-            style={{
-              maxWidth: "90%",
-              maxHeight: "90%",
-              objectFit: "contain",
-              borderRadius: "8px",
-              boxShadow: "0 4px 20px rgba(0,0,0,0.5)"
-            }} 
-          />
+        <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", backgroundColor: "rgba(0, 0, 0, 0.85)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 9999, cursor: "zoom-out" }} onClick={() => setZoomedImage(null)}>
+          <img src={zoomedImage} alt="Fullscreen Preview" style={{ maxWidth: "90%", maxHeight: "90%", objectFit: "contain", borderRadius: "8px" }} />
         </div>
       )}
 

@@ -4,27 +4,25 @@ import logo from "../assets/logo.png";
 import "../styles/report.css";
 import { Camera } from "lucide-react";
 
+// Gunakan instance Axios yang sudah dibuat
+import api from "../utils/axiosConfig";
+
 function BarangDitemukan() {
   const navigate = useNavigate();
 
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
   
-  // State Gambar dan File Aktual untuk Database
   const [previewImage, setPreviewImage] = useState(null);
-  const [imageFile, setImageFile] = useState(null); 
+  const [selectedFile, setSelectedFile] = useState(null); 
   
-  // State Profile Pengguna
   const [profileName, setProfileName] = useState("User");
   const [profileImage, setProfileImage] = useState(null);
-
-  // Ambil data profile dari localStorage saat komponen dimuat
-  useEffect(() => {
-    const name = localStorage.getItem("profileName");
-    const image = localStorage.getItem("profileImage");
-    if (name) setProfileName(name);
-    if (image) setProfileImage(image);
-  }, []);
+  const [userId, setUserId] = useState(""); 
+  
+  // State untuk menyimpan daftar kategori dari database
+  const [categories, setCategories] = useState([]);
 
   const [form, setForm] = useState({
     nama: "",
@@ -33,7 +31,40 @@ function BarangDitemukan() {
     lokasi: "",
     tanggal: "",
     waktu: "",
+    email: "", // Ditambahkan karena validator mewajibkan field 'contact'
   });
+
+  useEffect(() => {
+    // Ambil info user dari localStorage
+    const name = localStorage.getItem("profileName");
+    const image = localStorage.getItem("profileImage");
+    const id = localStorage.getItem("userId") || "1"; 
+    
+    if (name) setProfileName(name);
+    if (image) setProfileImage(image);
+    if (id) setUserId(id);
+    
+    const savedEmail = localStorage.getItem("userEmail");
+    if (savedEmail) {
+      setForm((prev) => ({ ...prev, email: savedEmail }));
+    }
+
+    // Ambil data kategori dari backend
+    const fetchCategories = async () => {
+      try {
+        const response = await api.get("/api/categories");
+        if (response.data && response.data.data) {
+          setCategories(response.data.data);
+        } else if (Array.isArray(response.data)) {
+          setCategories(response.data);
+        }
+      } catch (error) {
+        console.error("Gagal memuat kategori:", error);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   const handleChange = (e) => {
     setForm({
@@ -52,13 +83,22 @@ function BarangDitemukan() {
       return;
     }
 
-    setImageFile(file); // Simpan file aslinya untuk dikirim ke backend
+    setSelectedFile(file); 
     setPreviewImage(URL.createObjectURL(file));
+  };
+
+  const convertFileToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
+    });
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!imageFile) {
+    if (!selectedFile) {
       alert("Foto barang wajib diunggah!");
       return;
     }
@@ -70,37 +110,84 @@ function BarangDitemukan() {
   // ==========================================================
   const handleYes = async () => {
     setShowConfirm(false);
+    setLoading(true);
 
     try {
-      const userId = localStorage.getItem("userId") || "1"; // Ambil ID User yang login
-
-      // Gunakan FormData untuk mengirim text + file binary gambar
       const formData = new FormData();
-      formData.append("userId", userId);
+      
+      // Sesuaikan key dengan validator item di backend
+      formData.append("user_id", parseInt(userId));
+      formData.append("category_id", parseInt(form.kategori));
+      formData.append("type", "ditemukan"); // Set tipe secara dinamis ke 'ditemukan'
       formData.append("name", form.nama);
       formData.append("description", form.deskripsi);
-      formData.append("category", form.kategori);
       formData.append("location", form.lokasi);
-      formData.append("found_date", form.tanggal);
-      formData.append("found_time", form.waktu);
-      formData.append("photo", imageFile); // 'photo' disesuaikan dengan destinasi multer di backend
+      
+      // Note: Validator backend menggunakan 'lost_date' & 'lost_time' untuk kedua tipe
+      formData.append("lost_date", form.tanggal); 
+      formData.append("lost_time", form.waktu);
+      formData.append("contact", form.email); 
 
-      const response = await fetch("http://localhost:5000/api/found-items", {
-        method: "POST",
-        body: formData, // Jangan pasang header Content-Type jika memakai FormData (browser mengaturnya otomatis)
+      // Field gambar disesuaikan dengan multer (photo_path)
+      if (selectedFile) {
+        formData.append("photo_path", selectedFile);
+      }
+
+      // Kirim via Axios
+      const response = await api.post("/api/items", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log("Laporan berhasil disimpan ke DB:", result);
-        setShowSuccess(true);
-      } else {
-        const errorData = await response.json();
-        alert(`Gagal menyimpan laporan: ${errorData.message || response.statusText}`);
+      const result = response.data;
+
+      // =================================================================
+      // SINKRONISASI KE LOCALSTORAGE (DASHBOARD)
+      // =================================================================
+      let imageBase64 = null;
+      if (selectedFile) {
+        try {
+          imageBase64 = await convertFileToBase64(selectedFile);
+        } catch (err) {
+          console.error("Gagal mengonversi base64:", err);
+        }
       }
+
+      const existingReports = JSON.parse(localStorage.getItem("allReports") || "[]");
+
+      const newReportItem = {
+        id: result.data?.id || Date.now(),
+        type: "ditemukan",
+        name: form.nama,
+        image: imageBase64,
+        status: "Ditemukan", // Set status default tampilan
+        category: categories.find(c => c.id === parseInt(form.kategori))?.name || "Lainnya",
+        description: form.deskripsi,
+        location: form.lokasi,
+        date: form.tanggal,
+        time: form.waktu,
+        contact: form.email,
+      };
+
+      existingReports.push(newReportItem);
+      localStorage.setItem("allReports", JSON.stringify(existingReports));
+
+      setShowSuccess(true);
+      
     } catch (error) {
-      console.error("Terjadi kesalahan jaringan saat menghubungi backend:", error);
-      alert("Gagal terhubung ke server. Pastikan backend Anda menyala.");
+      console.error("Error submitting report:", error);
+      
+      // Tangkap pesan error spesifik dari Express Validator
+      if (error.response && error.response.data && error.response.data.errors) {
+        alert(`Error Validasi: ${error.response.data.errors[0].message}`);
+      } else if (error.response && error.response.data) {
+        alert(error.response.data.message || "Gagal menyimpan laporan.");
+      } else {
+        alert("Gagal terhubung ke server. Pastikan backend Anda menyala.");
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -109,27 +196,13 @@ function BarangDitemukan() {
       <div className="report-topbar">
 
         <div className="report-left-header">
-          <button
-            className="report-back"
-            type="button"
-            onClick={() => navigate("/dashboard")}
-          >
+          <button className="report-back" type="button" onClick={() => navigate("/dashboard")}>
             ←
           </button>
-
-          <img
-            src={logo}
-            alt="Findora"
-            className="report-logo"
-          />
+          <img src={logo} alt="Findora" className="report-logo" />
         </div>
 
-        {/* PROFILE CLICKABLE */}
-        <div
-          className="report-profile"
-          onClick={() => navigate("/profile")}
-          style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "10px" }}
-        >
+        <div className="report-profile" onClick={() => navigate("/profile")} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "10px" }}>
           {profileImage ? (
             <img 
               src={profileImage} 
@@ -150,170 +223,99 @@ function BarangDitemukan() {
       <div className="report-main">
         <h1 className="report-title">Laporkan Barang Ditemukan</h1>
 
-        <form
-          className="report-form-card"
-          onSubmit={handleSubmit}
-        >
+        <form className="report-form-card" onSubmit={handleSubmit}>
           <p className="report-info-text">
             Lengkapi formulir dibawah ini dengan detail yang akurat.
-            Berikan deskripsi umum untuk keamanan klaim
+            Berikan deskripsi umum untuk keamanan klaim.
           </p>
 
           <div className="report-form-grid">
 
-            {/* LEFT */}
             <div className="report-left-form">
-
               <label>Nama Barang</label>
-              <input
-                type="text"
-                name="nama"
-                value={form.nama}
-                onChange={handleChange}
-                placeholder="Dompet"
-                required
-              />
+              <input type="text" name="nama" value={form.nama} onChange={handleChange} placeholder="Dompet" required />
 
               <label>Deskripsi Umum Barang</label>
-              <textarea
-                name="deskripsi"
-                value={form.deskripsi}
-                onChange={handleChange}
-                placeholder="warna hitam, bahan kulit kasar"
-                required
-              />
+              <textarea name="deskripsi" value={form.deskripsi} onChange={handleChange} placeholder="warna hitam, bahan kulit kasar" required />
 
               <label>Kategori Barang</label>
-              <select
-                name="kategori"
-                value={form.kategori}
-                onChange={handleChange}
-                required
-              >
-                <option value="" disabled>
-                  Pilih
-                </option>
-                <option value="Dompet">Dompet & sejenisnya</option>
-                <option value="Elektronik">Elektronik</option>
-                <option value="Dokumen">Dokumen</option>
-                <option value="Aksesoris">Aksesoris</option>
-                <option value="Kunci">Kunci</option>
-                <option value="Lainnya">Lainnya</option>
+              <select name="kategori" value={form.kategori} onChange={handleChange} required>
+                <option value="" disabled>Pilih Kategori</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
               </select>
 
               <label>Lokasi Penemuan</label>
-              <input
-                type="text"
-                name="lokasi"
-                value={form.lokasi}
-                onChange={handleChange}
-                placeholder="lab 203 kampus 1"
-                required
-              />
-
+              <input type="text" name="lokasi" value={form.lokasi} onChange={handleChange} placeholder="lab 203 kampus 1" required />
+              
+              {/* Posisi tombol menyesuaikan layout */}
+              <button 
+                className="report-submit-btn report-found-btn" 
+                type="submit"
+                disabled={loading}
+              >
+                {loading ? "Mengirim..." : "Kirim Laporan"}
+              </button>
             </div>
 
-            {/* RIGHT */}
             <div className="report-right-form">
-
               <label>Foto Barang (wajib)</label>
 
               <div className="report-upload-box">
-
                 {previewImage ? (
-                  <img
-                    src={previewImage}
-                    alt="Preview barang"
-                    className="report-preview-img"
-                  />
+                  <img src={previewImage} alt="Preview barang" className="report-preview-img" />
                 ) : (
                   <>
                     <div className="report-camera" style={{ display: "flex", justifyContent: "center", marginBottom: "10px" }}>
                       <Camera size={32} color="#888" />
                     </div>
-                    <p>
-                      Unggah gambar atau drag <br />
-                      dan drop disini (Maks. 5 MB)
-                    </p>
+                    <p>Unggah gambar atau drag <br /> dan drop disini (Maks. 5 MB)</p>
                   </>
                 )}
-
                 <label className="report-upload-btn">
                   Upload
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="report-file-input"
-                    onChange={handleUpload}
-                  />
+                  <input type="file" accept="image/*" className="report-file-input" onChange={handleUpload} />
                 </label>
-
               </div>
 
               <p className="report-warning-text">
-                ⚠ Hanya unggah gambar yang jelas tapi tidak
-                menampilkan detail unik spesifik
-                (misal: nomor seri, isi dompet.)
+                ⚠ Hanya unggah gambar yang jelas tapi tidak menampilkan detail unik spesifik (misal: nomor seri, isi dompet).
               </p>
 
               <div className="report-date-row">
-
                 <div>
                   <label>Tanggal Ditemukan</label>
-                  <input
-                    type="date"
-                    name="tanggal"
-                    value={form.tanggal}
-                    onChange={handleChange}
-                    required
-                  />
+                  <input type="date" name="tanggal" value={form.tanggal} onChange={handleChange} required />
                 </div>
-
                 <div>
                   <label>Waktu Ditemukan</label>
-                  <input
-                    type="time"
-                    name="waktu"
-                    value={form.waktu}
-                    onChange={handleChange}
-                    required
-                  />
+                  <input type="time" name="waktu" value={form.waktu} onChange={handleChange} required />
                 </div>
-
               </div>
 
-              <button
-                className="report-submit-btn report-found-btn"
-                type="submit"
-              >
-                Kirim Laporan
-              </button>
-
+              {/* Tambahan Field Kontak karena diwajibkan oleh Validator Backend */}
+              <label>Informasi Kontak Penemu (Nama/Email/No HP)</label>
+              <input type="email" name="email" value={form.email} onChange={handleChange} placeholder="revalno@gmail.com" required />
+              
             </div>
 
           </div>
         </form>
       </div>
 
-      {/* CONFIRM MODAL */}
       {showConfirm && (
         <div className="report-modal-bg">
           <div className="report-modal report-confirm-box">
             <div className="report-warning-icon">!</div>
             <p>Yakin ingin mengirim Laporan?</p>
             <div className="report-modal-buttons">
-              <button
-                type="button"
-                className="report-cancel-btn"
-                onClick={() => setShowConfirm(false)}
-              >
+              <button type="button" className="report-cancel-btn" onClick={() => setShowConfirm(false)} disabled={loading}>
                 Batalkan
               </button>
-              <button
-                type="button"
-                className="report-yes-btn"
-                onClick={handleYes}
-              >
+              <button type="button" className="report-yes-btn" onClick={handleYes} disabled={loading}>
                 Ya
               </button>
             </div>
@@ -321,17 +323,12 @@ function BarangDitemukan() {
         </div>
       )}
 
-      {/* SUCCESS MODAL */}
       {showSuccess && (
         <div className="report-modal-bg">
           <div className="report-modal report-success-box">
             <div className="report-success-icon">✓</div>
             <p>Laporan berhasil terkirim</p>
-            <button
-              type="button" 
-              className="report-close-btn"
-              onClick={() => navigate("/dashboard")}
-            >
+            <button type="button" className="report-close-btn" onClick={() => navigate("/dashboard")}>
               Tutup
             </button>
           </div>
