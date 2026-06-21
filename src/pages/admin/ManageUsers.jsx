@@ -1,18 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../../utils/axiosConfig'; 
 import './ManageUsers.css';
 import logo from '../../assets/logo.png';
 
 const ManageUsers = () => {
   const navigate = useNavigate();
 
-  const [users, setUsers] = useState([
-    { id: 'U001', name: 'Reval', nim: '231011999', access: 'Mahasiswa', status: 'Aktif' },
-    { id: 'U002', name: 'Davira Elvina', nim: '9823589237999', access: 'Staff', status: 'Aktif' },
-    { id: 'U003', name: 'Riska Haniriadi', nim: '231011087', access: 'Mahasiswa', status: 'Nonaktif' },
-    { id: 'U004', name: 'Budi Prasetyo', nim: '2983593289893', access: 'Dosen', status: 'Aktif' },
-    { id: 'U005', name: 'Husnul Khatimah', nim: '231011096', access: 'Mahasiswa', status: 'Aktif' },
-  ]);
+  // --- STATE CORE DATA ---
+  const [users, setUsers] = useState([]);
+  const [stats, setStats] = useState({ totalUsers: 0, totalMahasiswa: 0, totalDosen: 0, totalStaff: 0 });
+  const [loading, setLoading] = useState(false);
+  
+  // --- STATE PAGINATION & SEARCH ---
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const limitPerPage = 5;
+
+  // --- STATE MODAL TAMBAH ---
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [addFormData, setAddFormData] = useState({
+    name: '', email: '', nim: '', role: 'Mahasiswa', password: '', status: 'Aktif'
+  });
 
   // --- STATE MODAL EDIT ---
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -21,17 +31,67 @@ const ManageUsers = () => {
   // --- STATE MODAL HAPUS ---
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
-  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false); // Untuk box "Yakin ingin menghapus?"
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+
+  // ================= FETCH DATA FROM API =================
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get('/api/users', {
+        params: {
+          page: currentPage,
+          limit: limitPerPage,
+          search: searchQuery
+        }
+      });
+      if (response.data.success) {
+        setUsers(response.data.users);
+        setStats(response.data.stats);
+        setTotalPages(response.data.pagination.totalPages);
+      }
+    } catch (error) {
+      console.error("Gagal mengambil data user:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, [currentPage, searchQuery]);
+
+  // ================= FUNGSI TAMBAH =================
+  const handleAddInputChange = (e) => {
+    const { name, value } = e.target;
+    setAddFormData({ ...addFormData, [name]: value });
+  };
+
+  const handleSaveAdd = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await api.post('/api/users', addFormData);
+      if (response.data.success) {
+        alert(response.data.message);
+        setIsAddModalOpen(false);
+        setAddFormData({ name: '', email: '', nim: '', role: 'Mahasiswa', password: '', status: 'Aktif' });
+        fetchUsers(); // Refresh data
+      }
+    } catch (error) {
+      alert(error.response?.data?.message || "Gagal menambah pengguna");
+    }
+  };
 
   // ================= FUNGSI EDIT =================
   const handleEditClick = (user) => {
-    setEditFormData(user);
+    setEditFormData({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      nim: user.nim,
+      role: user.role,
+      status: user.status || 'Aktif'
+    });
     setIsEditModalOpen(true);
-  };
-
-  const handleCloseEditModal = () => {
-    setIsEditModalOpen(false);
-    setEditFormData(null);
   };
 
   const handleEditInputChange = (e) => {
@@ -39,32 +99,40 @@ const ManageUsers = () => {
     setEditFormData({ ...editFormData, [name]: value });
   };
 
-  const handleSaveEdit = (e) => {
+  const handleSaveEdit = async (e) => {
     e.preventDefault();
-    setUsers(users.map((u) => (u.id === editFormData.id ? editFormData : u)));
-    handleCloseEditModal();
+    try {
+      const response = await api.put(`/api/users/${editFormData.id}`, editFormData);
+      if (response.data.success) {
+        alert(response.data.message);
+        setIsEditModalOpen(false);
+        setEditFormData(null);
+        fetchUsers();
+      }
+    } catch (error) {
+      alert(error.response?.data?.message || "Gagal memperbarui pengguna");
+    }
   };
 
   // ================= FUNGSI HAPUS =================
   const handleDeleteClick = (user) => {
     setUserToDelete(user);
-    setShowDeleteConfirmation(false); // Reset konfirmasi lapis kedua
+    setShowDeleteConfirmation(false);
     setIsDeleteModalOpen(true);
   };
 
-  const handleCloseDeleteModal = () => {
-    setIsDeleteModalOpen(false);
-    setUserToDelete(null);
-    setShowDeleteConfirmation(false);
-  };
-
-  const handleTriggerConfirmation = () => {
-    setShowDeleteConfirmation(true);
-  };
-
-  const executeDelete = () => {
-    setUsers(users.filter(u => u.id !== userToDelete.id));
-    handleCloseDeleteModal();
+  const executeDelete = async () => {
+    try {
+      const response = await api.delete(`/api/users/${userToDelete.id}`);
+      if (response.data.success) {
+        alert(response.data.message);
+        setIsDeleteModalOpen(false);
+        setUserToDelete(null);
+        fetchUsers();
+      }
+    } catch (error) {
+      alert(error.response?.data?.message || "Gagal menghapus pengguna");
+    }
   };
 
   return (
@@ -106,23 +174,23 @@ const ManageUsers = () => {
                 </svg>
                 Total Pengguna Terdaftar
               </div>
-              <div className="mu-stat-number">{users.length}</div>
+              <div className="mu-stat-number">{stats.totalUsers}</div>
             </div>
 
             <div className="mu-stat-card mu-card-details">
               <div className="mu-stat-detail">
                 <span className="mu-text-orange">Total Mahasiswa</span>
-                <div className="mu-stat-number mu-text-orange">{users.filter(u => u.access === 'Mahasiswa').length}</div>
+                <div className="mu-stat-number mu-text-orange">{stats.totalMahasiswa}</div>
               </div>
               <div className="mu-divider"></div>
               <div className="mu-stat-detail">
                 <span className="mu-text-blue">Total Dosen</span>
-                <div className="mu-stat-number mu-text-blue">{users.filter(u => u.access === 'Dosen').length}</div>
+                <div className="mu-stat-number mu-text-blue">{stats.totalDosen}</div>
               </div>
               <div className="mu-divider"></div>
               <div className="mu-stat-detail">
                 <span className="mu-text-red">Total Staff</span>
-                <div className="mu-stat-number mu-text-red">{users.filter(u => u.access === 'Staff').length}</div>
+                <div className="mu-stat-number mu-text-red">{stats.totalStaff}</div>
               </div>
             </div>
           </div>
@@ -137,12 +205,18 @@ const ManageUsers = () => {
             
             <div className="th-right-actions">
               <div className="mu-search-box">
-                <input type="text" placeholder="Search" />
+                <input 
+                  type="text" 
+                  placeholder="Cari nama atau NIM..." 
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                />
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#5A3929" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
               </div>
-              <button className="btn-add-user">
+              {/* PEMBETULAN AKSI KLIK TAMBAH PENGGUNA */}
+              <button className="btn-add-user" onClick={() => setIsAddModalOpen(true)}>
                 <span>+</span> Tambah Pengguna Baru
               </button>
             </div>
@@ -154,20 +228,24 @@ const ManageUsers = () => {
                 <tr>
                   <th>ID Pengguna</th>
                   <th>Nama Lengkap</th>
+                  <th>Email</th>
                   <th>NIM/NIP</th>
-                  <th>Hak Akses <span className="sort-icon">⇅</span></th>
-                  <th>Status <span className="sort-icon">⇅</span></th>
+                  <th>Hak Akses</th>
+                  <th>Status</th>
                   <th>Aksi</th>
                 </tr>
               </thead>
               <tbody>
-                {users.map((u) => (
+                {loading ? (
+                  <tr><td colSpan="7" style={{textAlign:'center', padding:'20px'}}>Memuat data sistem...</td></tr>
+                ) : users.length > 0 ? users.map((u) => (
                   <tr key={u.id}>
-                    <td><strong>{u.id}</strong></td>
+                    <td><strong>#{u.id}</strong></td>
                     <td>{u.name}</td>
+                    <td>{u.email}</td>
                     <td>{u.nim}</td>
-                    <td><span className={`mu-badge mu-access-${u.access.toLowerCase()}`}>{u.access}</span></td>
-                    <td><span className={`mu-badge mu-status-${u.status.toLowerCase()}`}>{u.status}</span></td>
+                    <td><span className={`mu-badge mu-access-${u.role.toLowerCase()}`}>{u.role}</span></td>
+                    <td><span className={`mu-badge mu-status-${(u.status || 'Aktif').toLowerCase()}`}>{u.status || 'Aktif'}</span></td>
                     <td className="mu-actions">
                       <button className="mu-icon-btn mu-edit" onClick={() => handleEditClick(u)}>
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
@@ -177,19 +255,71 @@ const ManageUsers = () => {
                       </button>
                     </td>
                   </tr>
-                ))}
+                )) : (
+                  <tr><td colSpan="7" style={{textAlign:'center', padding:'20px'}}>Tidak ada data pengguna ditemukan.</td></tr>
+                )}
               </tbody>
             </table>
           </div>
 
+          {/* SINKRONISASI NAVIGASI HALAMAN SERVER */}
           <div className="mu-pagination">
-            <button className="mu-page-btn">◀</button>
-            <button className="mu-page-btn active">1</button>
-            <button className="mu-page-btn">2</button>
-            <button className="mu-page-btn">▶</button>
+            <button className="mu-page-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>◀</button>
+            <span style={{padding: '0 15px', fontWeight: 'bold'}}>{currentPage} dari {totalPages}</span>
+            <button className="mu-page-btn" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>▶</button>
           </div>
         </div>
       </main>
+
+      {/* ================= MODAL TAMBAH BARU (PERBAIKAN UTAMA) ================= */}
+      {isAddModalOpen && (
+        <div className="mu-modal-overlay">
+          <div className="mu-modal-content">
+            <div className="mu-modal-header">
+              <h3>Tambah Pengguna Baru</h3>
+              <button className="mu-close-btn" onClick={() => setIsAddModalOpen(false)}>&times;</button>
+            </div>
+            <form onSubmit={handleSaveAdd}>
+              <div className="mu-form-group">
+                <label>Nama Lengkap</label>
+                <input type="text" name="name" value={addFormData.name} onChange={handleAddInputChange} required />
+              </div>
+              <div className="mu-form-group">
+                <label>Email Resmi</label>
+                <input type="email" name="email" value={addFormData.email} onChange={handleAddInputChange} required />
+              </div>
+              <div className="mu-form-group">
+                <label>NIM / NIP</label>
+                <input type="text" name="nim" value={addFormData.nim} onChange={handleAddInputChange} required />
+              </div>
+              <div className="mu-form-group">
+                <label>Kata Sandi Akun</label>
+                <input type="password" name="password" value={addFormData.password} onChange={handleAddInputChange} required placeholder="Minimal 6 karakter" />
+              </div>
+              <div className="mu-form-group">
+                <label>Hak Akses Sistem</label>
+                <select name="role" value={addFormData.role} onChange={handleAddInputChange}>
+                  <option value="Mahasiswa">Mahasiswa</option>
+                  <option value="Staff">Staff</option>
+                  <option value="Dosen">Dosen</option>
+                  <option value="Admin">Admin</option>
+                </select>
+              </div>
+              <div className="mu-form-group">
+                <label>Status Sistem</label>
+                <select name="status" value={addFormData.status} onChange={handleAddInputChange}>
+                  <option value="Aktif">Aktif</option>
+                  <option value="Nonaktif">Nonaktif</option>
+                </select>
+              </div>
+              <div className="mu-modal-actions">
+                <button type="button" className="btn-cancel" onClick={() => setIsAddModalOpen(false)}>Batal</button>
+                <button type="submit" className="btn-save" style={{backgroundColor: '#27ae60'}}>Simpan User</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* ================= MODAL EDIT ================= */}
       {isEditModalOpen && editFormData && (
@@ -197,7 +327,7 @@ const ManageUsers = () => {
           <div className="mu-modal-content">
             <div className="mu-modal-header">
               <h3>Edit Pengguna</h3>
-              <button className="mu-close-btn" onClick={handleCloseEditModal}>&times;</button>
+              <button className="mu-close-btn" onClick={() => setIsEditModalOpen(false)}>&times;</button>
             </div>
             <form onSubmit={handleSaveEdit}>
               <div className="mu-form-group">
@@ -209,15 +339,20 @@ const ManageUsers = () => {
                 <input type="text" name="name" value={editFormData.name} onChange={handleEditInputChange} required />
               </div>
               <div className="mu-form-group">
-                <label>NIM/NIP</label>
+                <label>Email Resmi</label>
+                <input type="email" name="email" value={editFormData.email} onChange={handleEditInputChange} required />
+              </div>
+              <div className="mu-form-group">
+                <label>NIM / NIP</label>
                 <input type="text" name="nim" value={editFormData.nim} onChange={handleEditInputChange} required />
               </div>
               <div className="mu-form-group">
                 <label>Hak Akses</label>
-                <select name="access" value={editFormData.access} onChange={handleEditInputChange}>
+                <select name="role" value={editFormData.role} onChange={handleEditInputChange}>
                   <option value="Mahasiswa">Mahasiswa</option>
                   <option value="Staff">Staff</option>
                   <option value="Dosen">Dosen</option>
+                  <option value="Admin">Admin</option>
                 </select>
               </div>
               <div className="mu-form-group">
@@ -228,7 +363,7 @@ const ManageUsers = () => {
                 </select>
               </div>
               <div className="mu-modal-actions">
-                <button type="button" className="btn-cancel" onClick={handleCloseEditModal}>Batal</button>
+                <button type="button" className="btn-cancel" onClick={() => setIsEditModalOpen(false)}>Batal</button>
                 <button type="submit" className="btn-save">Simpan Perubahan</button>
               </div>
             </form>
@@ -240,12 +375,10 @@ const ManageUsers = () => {
       {isDeleteModalOpen && userToDelete && (
         <div className="mu-modal-overlay">
           <div className="mu-delete-modal">
-            
             <div className="mu-delete-header">
               <h4>Konfirmasi Hapus Pengguna</h4>
-              <button className="mu-close-btn" onClick={handleCloseDeleteModal}>&times;</button>
+              <button className="mu-close-btn" onClick={() => setIsDeleteModalOpen(false)}>&times;</button>
             </div>
-
             <div className="mu-delete-body">
               <div className="mu-warning-icon-wrapper">
                 <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -253,18 +386,9 @@ const ManageUsers = () => {
                   <path d="M11 10H13V15H11V10ZM11 17H13V19H11V17Z" fill="white"/>
                 </svg>
               </div>
-              
               <h2 className="mu-delete-title">Hapus Pengguna {userToDelete.name}?</h2>
-
-              {/* Tampilan Konfirmasi Lapis Kedua (Menimpa detail pengguna) */}
               {showDeleteConfirmation ? (
                 <div className="mu-inner-confirm-box">
-                  <div className="mu-inner-icon">
-                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <circle cx="12" cy="12" r="10" fill="#E67E22"/>
-                      <path d="M11 7H13V13H11V7ZM11 15H13V17H11V15Z" fill="white"/>
-                    </svg>
-                  </div>
                   <p>Yakin ingin menghapus pengguna?</p>
                   <div className="mu-inner-actions">
                     <button className="btn-cancel-green" onClick={() => setShowDeleteConfirmation(false)}>Batalkan</button>
@@ -272,43 +396,21 @@ const ManageUsers = () => {
                   </div>
                 </div>
               ) : (
-                /* Tampilan Detail Pengguna (Awal) */
                 <>
                   <div className="mu-delete-info-list">
-                    <div className="mu-info-row">
-                      <span className="mu-info-label">Nama Lengkap:</span>
-                      <span className="mu-info-value">{userToDelete.name}</span>
-                    </div>
-                    <div className="mu-info-row">
-                      <span className="mu-info-label">NIM/NIP:</span>
-                      <span className="mu-info-value">{userToDelete.nim}</span>
-                    </div>
-                    <div className="mu-info-row">
-                      <span className="mu-info-label">Email:</span>
-                      <span className="mu-info-value">{userToDelete.name.split(' ')[0].toLowerCase()}@gmail.com</span>
-                    </div>
+                    <div className="mu-info-row"><span className="mu-info-label">Nama Lengkap:</span><span className="mu-info-value">{userToDelete.name}</span></div>
+                    <div className="mu-info-row"><span className="mu-info-label">NIM/NIP:</span><span className="mu-info-value">{userToDelete.nim}</span></div>
+                    <div className="mu-info-row"><span className="mu-info-label">Email:</span><span className="mu-info-value">{userToDelete.email}</span></div>
                   </div>
                   <p className="mu-warning-text-red">Peringatan: Tindakan ini tidak dapat dipulihkan.</p>
                 </>
               )}
-
-              <div className="mu-access-info">
-                <span>Hak Akses Sistem:</span>
-                <p>[Pelapor, Penemu]</p>
-              </div>
             </div>
-
             <div className="mu-delete-footer">
-              <button 
-                className="btn-delete-trigger" 
-                onClick={handleTriggerConfirmation}
-                disabled={showDeleteConfirmation} 
-                style={{ opacity: showDeleteConfirmation ? 0.5 : 1 }}
-              >
+              <button className="btn-delete-trigger" onClick={() => setShowDeleteConfirmation(true)} disabled={showDeleteConfirmation} style={{ opacity: showDeleteConfirmation ? 0.5 : 1 }}>
                 Hapus Pengguna
               </button>
             </div>
-
           </div>
         </div>
       )}

@@ -1,56 +1,102 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../../utils/axiosConfig'; // Instance Axios Anda
 import '../../styles/ArchiveData.css';
 import logo from '../../assets/logo.png';
 
 const ArchiveData = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('pengguna');
+  const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // State untuk menyimpan data Arsip Pengguna
-  const [usersArchived, setUsersArchived] = useState([
-    { id: 'U0011', name: 'Reynald', nim: '231011999', access: 'Mahasiswa', status: 'Nonaktif' },
-    { id: 'U008', name: 'Elaine Calista', nim: '9823589237999', access: 'Dosen', status: 'Nonaktif' },
-  ]);
+  // --- STATE DATA DARI BACKEND ---
+  const [usersArchived, setUsersArchived] = useState([]);
+  const [totalArchivedUsers, setTotalArchivedUsers] = useState(0);
 
-  // State untuk menyimpan data Arsip Laporan
+  // State Sementara untuk Laporan (Sesuaikan jika API Laporan sudah siap)
   const [reportsArchived, setReportsArchived] = useState([
     { id: '#009', item: 'Headphone Lenovo Hitam', date: '30 Maret 2026', status: 'Diarsipkan' },
     { id: '#008', item: 'Kepala cas hp', date: '03 April 2026', status: 'Diarsipkan' },
   ]);
 
-  // --- LOGIKA AKSI ---
-
-  // 1. Fungsi Pulihkan Data
-  const handleRestore = (id, type) => {
-    const isConfirmed = window.confirm(`Apakah Anda yakin ingin memulihkan ${type} dengan ID ${id}?`);
-    
-    if (isConfirmed) {
-      if (type === 'pengguna') {
-        setUsersArchived(usersArchived.filter(user => user.id !== id));
-      } else {
-        setReportsArchived(reportsArchived.filter(report => report.id !== id));
+  // ================= FETCH DATA DARI API =================
+  const fetchArchivedUsers = async () => {
+    setLoading(true);
+    try {
+      // 1. Mengarah ke endpoint khusus data yang sudah ter-softdelete
+      const response = await api.get('/api/users/archived', {
+        params: {
+          search: searchQuery
+        }
+      });
+      
+      if (response.data.success) {
+        // Karena backend sudah otomatis memfilter data soft-delete, langsung set state
+        setUsersArchived(response.data.users);
+        setTotalArchivedUsers(response.data.users.length);
       }
-      alert(`Data ${type} berhasil dipulihkan!`);
+    } catch (error) {
+      console.error("Gagal memuat arsip pengguna:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // 2. Fungsi Hapus Permanen
-  const handleDeletePermanent = (id, type) => {
+  useEffect(() => {
+    if (activeTab === 'pengguna') {
+      fetchArchivedUsers();
+    }
+  }, [activeTab, searchQuery]);
+
+
+  // ================= LOGIKA AKSI INTEGRASI BACKEND =================
+
+  // 1. Fungsi Pulihkan Data (Menghubungkan ke Endpoint Restore)
+  const handleRestore = async (user) => {
+    const isConfirmed = window.confirm(`Apakah Anda yakin ingin memulihkan pengguna ${user.name} (ID: ${user.id})?`);
+    
+    if (isConfirmed) {
+      try {
+        // 2. Menggunakan POST ke endpoint restore baru
+        const response = await api.post(`/api/users/${user.id}/restore`);
+        if (response.data.success) {
+          alert(`Pengguna ${user.name} berhasil dipulihkan ke daftar aktif!`);
+          fetchArchivedUsers(); // Refresh data halaman arsip
+        }
+      } catch (error) {
+        alert(error.response?.data?.message || "Gagal memulihkan pengguna");
+      }
+    }
+  };
+
+  // 2. Fungsi Hapus Permanen (Menghubungkan ke Endpoint Hard Delete)
+  const handleDeletePermanent = async (id, name, type) => {
     const isConfirmed = window.confirm(
-      `PERINGATAN! Anda akan menghapus permanen ${type} dengan ID ${id}.\nTindakan ini tidak dapat dibatalkan. Lanjutkan?`
+      `PERINGATAN KERAS!\nAnda akan menghapus PERMANEN ${type}: ${name} (ID: ${id}).\nTindakan ini menghapus data langsung dari database dan tidak dapat dibatalkan. Lanjutkan?`
     );
     
     if (isConfirmed) {
       if (type === 'pengguna') {
-        setUsersArchived(usersArchived.filter(user => user.id !== id));
+        try {
+          // 3. Menggunakan endpoint /permanent agar tidak memicu soft-delete lagi
+          const response = await api.delete(`/api/users/${id}/permanent`);
+          if (response.data.success) {
+            alert("Pengguna telah dihapus secara permanen dari sistem.");
+            fetchArchivedUsers(); // Refresh data
+          }
+        } catch (error) {
+          alert(error.response?.data?.message || "Gagal menghapus data permanen");
+        }
       } else {
+        // Logika hapus permanen untuk laporan (Simulasi)
         setReportsArchived(reportsArchived.filter(report => report.id !== id));
+        alert("Laporan berhasil dihapus permanen (Simulasi).");
       }
     }
   };
 
-  // --- IKON SVG (Diselaraskan dengan Dashboard) ---
+  // --- IKON SVG ---
   const iconUser = (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ED7D31" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -103,7 +149,9 @@ const ArchiveData = () => {
                {activeTab === 'pengguna' ? iconUser : iconReport}
                Total {activeTab === 'pengguna' ? 'Pengguna' : 'Laporan'} Diarsipkan
              </div>
-             <div className="mu-stat-number">{activeTab === 'pengguna' ? usersArchived.length : reportsArchived.length}</div>
+             <div className="mu-stat-number">
+               {activeTab === 'pengguna' ? totalArchivedUsers : reportsArchived.length}
+             </div>
           </div>
         </div>
 
@@ -111,12 +159,17 @@ const ArchiveData = () => {
         <div className="mu-table-container">
           <div className="mu-table-header">
             <div style={{display: 'flex', gap: '20px'}}>
-               <h3 className={`tab-title ${activeTab === 'pengguna' ? 'active' : ''}`} onClick={() => setActiveTab('pengguna')}>Arsip Pengguna</h3>
-               <h3 className={`tab-title ${activeTab === 'laporan' ? 'active' : ''}`} onClick={() => setActiveTab('laporan')}>Arsip Laporan</h3>
+               <h3 className={`tab-title ${activeTab === 'pengguna' ? 'active' : ''}`} onClick={() => { setActiveTab('pengguna'); setSearchQuery(''); }}>Arsip Pengguna</h3>
+               <h3 className={`tab-title ${activeTab === 'laporan' ? 'active' : ''}`} onClick={() => { setActiveTab('laporan'); setSearchQuery(''); }}>Arsip Laporan</h3>
             </div>
             
             <div className="mu-search-box">
-                <input type="text" placeholder="Search" />
+                <input 
+                  type="text" 
+                  placeholder={activeTab === 'pengguna' ? "Cari nama atau NIM..." : "Cari barang..."} 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#5A3929" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             </div>
           </div>
@@ -125,31 +178,46 @@ const ArchiveData = () => {
              <table className="mu-users-table">
                 <thead>
                     {activeTab === 'pengguna' ? (
-                        <tr><th>ID Pengguna</th><th>Nama Lengkap</th><th>NIM/NIP</th><th>Status</th><th>Aksi</th></tr>
+                        <tr><th>ID Pengguna</th><th>Nama Lengkap</th><th>NIM/NIP</th><th>Hak Akses</th><th>Status</th><th>Aksi</th></tr>
                     ) : (
                         <tr><th>ID Laporan</th><th>Nama Barang</th><th>Tanggal</th><th>Status</th><th>Aksi</th></tr>
                     )}
                 </thead>
                 <tbody>
-                    {activeTab === 'pengguna' ? usersArchived.map(u => (
+                    {loading ? (
+                      <tr><td colSpan="6" style={{textAlign: 'center', padding: '20px'}}>Memuat data arsip...</td></tr>
+                    ) : activeTab === 'pengguna' ? (
+                      usersArchived.length > 0 ? usersArchived.map(u => (
                         <tr key={u.id}>
-                            <td>{u.id}</td><td>{u.name}</td><td>{u.nim}</td>
+                            <td><strong>#{u.id}</strong></td>
+                            <td>{u.name}</td>
+                            <td>{u.nim}</td>
+                            <td><span className={`mu-badge mu-access-${u.role ? u.role.toLowerCase() : 'mahasiswa'}`}>{u.role}</span></td>
                             <td><span className="mu-badge mu-status-nonaktif">{u.status}</span></td>
                             <td className="mu-actions">
-                              <button className="mu-icon-btn mu-btn-restore" title="Pulihkan" onClick={() => handleRestore(u.id, 'pengguna')}>↺</button>
-                              <button className="mu-icon-btn mu-btn-delete" title="Hapus Permanen" onClick={() => handleDeletePermanent(u.id, 'pengguna')}>🗑</button>
+                              <button className="mu-icon-btn mu-btn-restore" title="Pulihkan Pengguna" onClick={() => handleRestore(u)}>↺</button>
+                              <button className="mu-icon-btn mu-btn-delete" title="Hapus Permanen" onClick={() => handleDeletePermanent(u.id, u.name, 'pengguna')}>🗑</button>
                             </td>
                         </tr>
-                    )) : reportsArchived.map(r => (
+                      )) : (
+                        <tr><td colSpan="6" style={{textAlign: 'center', padding: '20px'}}>Tidak ada arsip pengguna.</td></tr>
+                      )
+                    ) : (
+                      reportsArchived.length > 0 ? reportsArchived.map(r => (
                         <tr key={r.id}>
-                            <td>{r.id}</td><td>{r.item}</td><td>{r.date}</td>
+                            <td><strong>{r.id}</strong></td>
+                            <td>{r.item}</td>
+                            <td>{r.date}</td>
                             <td><span className="mu-badge mu-status-nonaktif">{r.status}</span></td>
                             <td className="mu-actions">
-                              <button className="mu-icon-btn mu-btn-restore" title="Pulihkan" onClick={() => handleRestore(r.id, 'laporan')}>↺</button>
-                              <button className="mu-icon-btn mu-btn-delete" title="Hapus Permanen" onClick={() => handleDeletePermanent(r.id, 'laporan')}>🗑</button>
+                              <button className="mu-icon-btn mu-btn-restore" title="Pulihkan Laporan" onClick={() => alert("Fitur pulihkan laporan akan aktif setelah API terhubung.")}>↺</button>
+                              <button className="mu-icon-btn mu-btn-delete" title="Hapus Permanen" onClick={() => handleDeletePermanent(r.id, r.item, 'laporan')}>🗑</button>
                             </td>
                         </tr>
-                    ))}
+                      )) : (
+                        <tr><td colSpan="5" style={{textAlign: 'center', padding: '20px'}}>Tidak ada arsip laporan.</td></tr>
+                      )
+                    )}
                 </tbody>
              </table>
           </div>
