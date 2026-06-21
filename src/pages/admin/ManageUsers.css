@@ -1,0 +1,634 @@
+/* --- NAVBAR KUSTOM UNTUK MANAGE USERS --- */
+.mu-top-navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: white;
+  padding: 15px 50px; 
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.mu-nav-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.mu-logo-img {
+  width: 45px;
+  height: auto;
+  object-fit: contain;
+}
+
+.logo-text h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #E67E22;
+}
+
+.logo-text span {
+  font-size: 12px;
+  color: #E67E22;
+}
+
+.mu-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-back-nav {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+}
+
+.btn-back-nav:hover { background-color: #f0f0f0; }
+
+.mu-avatar-circle {
+  width: 40px;
+  height: 40px;
+  background-color: #FF7F50;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-name {
+  font-weight: 700;
+  color: #000;
+  font-size: 16px;
+}
+
+/* --- KONTEN UTAMA --- */
+.main-content {
+  padding: 30px 50px; 
+  width: 100%; 
+  box-sizing: border-box;
+}
+
+.page-title {
+  margin-top: 0;
+  margin-bottom: 25px;
+  font-size: 24px;
+  color: #222;
+}
+
+/* --- STATS CARD --- */
+.mu-top-actions {
+  margin-bottom: 30px;
+}
+
+.mu-stats-container {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.mu-stat-card {
+  background: white;
+  border-radius: 8px;
+  padding: 20px 25px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+}
+
+.mu-card-total {
+  background-color: #FCE8ED; 
+  border: 1px solid #e0c8ce;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 220px;
+}
+
+.mu-stat-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #444;
+  margin-bottom: 10px;
+}
+
+.mu-stat-number {
+  font-size: 38px;
+  font-weight: bold;
+  color: #333;
+}
+
+.mu-card-details {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  border: 1px solid #dcdcdc;
+}
+
+.mu-stat-detail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 10px;
+}
+
+.mu-stat-detail span {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.mu-divider {
+  width: 1px;
+  height: 50px;
+  background-color: #e0e0e0;
+}
+
+.mu-text-orange { color: #E67E22 !important; }
+.mu-text-blue { color: #2980B9 !important; }
+.mu-text-red { color: #C0392B !important; }
+
+/* --- HEADER TABEL --- */
+.mu-table-container {
+  background: white; 
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  padding: 25px 30px;
+  width: 100%; 
+  box-sizing: border-box;
+}
+
+.mu-table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.th-left h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #222;
+  font-weight: 700;
+}
+
+.th-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px; 
+}
+
+/* --- SEARCH BAR (DIPERBAIKI) --- */
+.mu-search-box {
+  /* PENTING: Ini memaksa lebar tetap 200px dan tidak melar/menyusut */
+  flex: 0 0 200px !important; 
+  width: 250px !important;
+  
+  /* Atur tinggi secara eksplisit agar tidak berubah */
+  height: 45px !important; 
+  padding: 0 16px !important; /* Gunakan padding horizontal saja, nol-kan vertikal */
+  
+  /* Sisanya tetap untuk estetika */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  background-color: white !important;
+  border: 1px solid #5A3929 !important; 
+  border-radius: 25px !important;
+  box-sizing: border-box;
+}
+
+.mu-search-box input {
+  border: none;
+  outline: none;
+  width: 100%;
+  font-size: 14px;
+}
+
+.btn-add-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  background-color: #007BFF;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,123,255,0.2);
+}
+
+.btn-add-user:hover {
+  background-color: #0056b3;
+}
+
+/* --- TABEL --- */
+.table-responsive { overflow-x: auto; }
+
+.mu-users-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+}
+
+.mu-users-table thead tr { 
+  background-color: #E2E3E5; 
+}
+
+.mu-users-table th, 
+.mu-users-table td {
+  padding: 15px;
+  text-align: center;
+  border-bottom: 1px solid #eee;
+  font-size: 14px;
+  color: #000; 
+}
+
+.mu-users-table th {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.mu-users-table th:nth-child(1),
+.mu-users-table td:nth-child(1),
+.mu-users-table th:nth-child(2),
+.mu-users-table td:nth-child(2),
+.mu-users-table th:nth-child(3),
+.mu-users-table td:nth-child(3) {
+  text-align: left;
+}
+
+.sort-icon { font-size: 11px; margin-left: 5px; color: #888; }
+
+.mu-badge {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-block;
+  color: #000; 
+}
+.mu-access-mahasiswa { background-color: #F4D5B7; } 
+.mu-access-staff { background-color: #FBCAD0; } 
+.mu-access-dosen { background-color: #BCD8F2; } 
+.mu-status-aktif { background-color: #A9E4B6; } 
+.mu-status-nonaktif { background-color: #FA9A99; } 
+
+.mu-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.mu-icon-btn {
+  border-radius: 6px;
+  padding: 6px 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mu-edit { 
+  background-color: #A9E4B6; 
+  color: #155724; 
+  border: 1.5px solid #155724; 
+}
+.mu-delete { 
+  background-color: #FBCAD0; 
+  color: #8B0000; 
+  border: 1.5px solid #8B0000; 
+}
+
+.mu-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 25px;
+}
+.mu-page-btn {
+  background: #E2E3E5;
+  border: none;
+  color: #333;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+.mu-page-btn.active {
+  background-color: #007BFF;
+  color: white;
+}
+
+/* --- MODAL --- */
+.mu-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  backdrop-filter: blur(2px);
+}
+
+.mu-modal-content {
+  background-color: white;
+  padding: 30px;
+  border-radius: 12px;
+  width: 420px;
+  max-width: 90%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.mu-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.mu-modal-header h3 {
+  margin: 0;
+  font-size: 20px;
+  color: #222;
+  font-weight: 700;
+}
+
+.mu-close-btn {
+  background: none;
+  border: none;
+  font-size: 26px;
+  cursor: pointer;
+  color: #888;
+  transition: color 0.2s ease;
+}
+
+.mu-close-btn:hover {
+  color: #C0392B;
+}
+
+.mu-form-group {
+  margin-bottom: 15px;
+}
+
+.mu-form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  text-align: left;
+}
+
+.mu-form-group input,
+.mu-form-group select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.mu-form-group input:focus,
+.mu-form-group select:focus {
+  border-color: #E67E22;
+}
+
+.mu-form-group input:disabled {
+  background-color: #f5f5f5;
+  color: #888;
+  cursor: not-allowed;
+}
+
+.mu-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 30px;
+}
+
+.btn-cancel {
+  padding: 10px 18px;
+  background-color: #f1f1f1;
+  color: #333;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background-color 0.2s ease;
+}
+
+.btn-cancel:hover {
+  background-color: #e2e2e2;
+}
+
+.btn-save {
+  padding: 10px 18px;
+  background-color: #007BFF;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background-color 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+}
+
+.btn-save:hover {
+  background-color: #0056b3;
+}
+
+/* --- MODAL HAPUS --- */
+.mu-delete-modal {
+  background-color: white;
+  border-radius: 12px;
+  width: 450px;
+  max-width: 90%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  animation: modalFadeIn 0.3s ease;
+  overflow: hidden;
+}
+
+.mu-delete-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 25px;
+  border-bottom: 1px solid #eee;
+}
+
+.mu-delete-header h4 {
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+  font-weight: 700;
+}
+
+.mu-delete-body {
+  padding: 25px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.mu-warning-icon-wrapper {
+  margin-bottom: 15px;
+}
+
+.mu-delete-title {
+  margin: 0 0 25px 0;
+  font-size: 20px;
+  color: #222;
+  font-weight: 700;
+  text-align: center;
+}
+
+.mu-delete-info-list {
+  width: 100%;
+  margin-bottom: 15px;
+  font-size: 14px;
+}
+
+.mu-info-row {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
+}
+
+.mu-info-label {
+  color: #666;
+  margin-bottom: 3px;
+}
+
+.mu-info-value {
+  color: #000;
+  font-weight: 500;
+}
+
+.mu-warning-text-red {
+  color: #C0392B;
+  font-weight: 700;
+  font-size: 13px;
+  width: 100%;
+  text-align: left;
+  margin-bottom: 20px;
+}
+
+.mu-access-info {
+  width: 100%;
+  text-align: left;
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 10px;
+}
+
+.mu-access-info p {
+  margin: 5px 0 0 0;
+  font-weight: 600;
+}
+
+.mu-delete-footer {
+  padding: 15px 25px 25px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-delete-trigger {
+  background-color: #E63946;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-delete-trigger:hover:not(:disabled) {
+  background-color: #C0392B;
+}
+
+.mu-inner-confirm-box {
+  background-color: #FADBD8;
+  border: 1px solid #E63946;
+  border-radius: 10px;
+  padding: 20px;
+  width: 100%;
+  text-align: center;
+  margin-bottom: 20px;
+  box-sizing: border-box;
+  animation: modalFadeIn 0.3s ease;
+}
+
+.mu-inner-icon {
+  margin-bottom: 10px;
+}
+
+.mu-inner-confirm-box p {
+  margin: 0 0 15px 0;
+  font-weight: 700;
+  color: #333;
+  font-size: 15px;
+}
+
+.mu-inner-actions {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.btn-cancel-green {
+  background-color: #2ECC71;
+  color: white;
+  border: none;
+  padding: 8px 25px;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-cancel-green:hover {
+  background-color: #27AE60;
+}
+
+.btn-confirm-red {
+  background-color: #E63946;
+  color: white;
+  border: none;
+  padding: 8px 30px;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-confirm-red:hover {
+  background-color: #C0392B;
+}

@@ -1,0 +1,104 @@
+/* Import style utama dari Kelola Pengguna */
+@import '../pages/admin/ManageUsers.css';
+
+/* ==========================================================================
+   STYLE HALAMAN ARSIP (TABS & STATS)
+   ========================================================================== */
+
+/* Style Pilihan Judul Tab */
+.tab-title {
+    cursor: pointer;
+    color: #888;
+    padding-bottom: 5px;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease-in-out;
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.tab-title:hover {
+    color: #E67E22;
+}
+
+.tab-title.active {
+    color: #E67E22;
+    border-bottom: 3px solid #E67E22;
+}
+
+/* Penyelarasan Posisi Ikon SVG & Teks di Stat Card */
+.mu-stat-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #666666;
+    margin-bottom: 10px;
+}
+
+/* ==========================================================================
+   STYLE TABEL ARSIP & TOMBOL AKSI
+   ========================================================================== */
+
+.mu-users-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+/* Desain Badge Bulat Status */
+.mu-status-nonaktif {
+    background-color: #FA9A99;
+    color: #721C24;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    display: inline-block;
+    text-align: center;
+}
+
+/* Container Kolom Aksi */
+.mu-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Base Style Tombol Ikon Mini */
+.mu-icon-btn {
+    border: 1px solid #ddd;
+    background: white;
+    cursor: pointer;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+/* Tombol Pulihkan (Warna Biru sesuai Kelola Pengguna/Dashboard) */
+.mu-btn-restore {
+    color: #007BFF;
+    border-color: #A0C4FF;
+}
+
+.mu-btn-restore:hover {
+    background-color: #007BFF;
+    color: white;
+    border-color: #007BFF;
+}
+
+/* Tombol Hapus Permanen (Warna Merah sesuai Kelola Pengguna/Dashboard) */
+.mu-btn-delete {
+    color: #DC3545;
+    border-color: #FFC0CB;
+}
+
+.mu-btn-delete:hover {
+    background-color: #DC3545;
+    color: white;
+    border-color: #DC3545;
+}
