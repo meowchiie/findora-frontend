@@ -1,27 +1,32 @@
 import { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom"; // Tambahkan useSearchParams
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import api from "../utils/axiosConfig";
 import logo from "../assets/logo.png";
-import "../styles/dashboard.css"; // Sesuaikan dengan lokasi file CSS kamu
-import "../styles/semuaLaporan.css"; // Sesuaikan dengan lokasi file CSS kamu
+import "../styles/dashboard.css"; 
+import "../styles/semuaLaporan.css"; 
 
 function SemuaLaporan() {
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // 1. Inisialisasi useSearchParams untuk membaca dan menulis query param di URL
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // Ambil keyword pencarian jika diarahkan dari Dashboard
-  const initialKeyword = location.state?.keyword || "";
+  // 2. Ambil nilai langsung dari URL query params (berikan fallback jika kosong)
+  const currentPage = parseInt(searchParams.get("page")) || 1;
+  const filterType = searchParams.get("type") || "semua";
+  const urlSearchQuery = searchParams.get("search") || location.state?.keyword || "";
 
   // State Data & API
   const [reports, setReports] = useState([]);
-  const [searchQuery, setSearchQuery] = useState(initialKeyword);
-  const [filterType, setFilterType] = useState("semua"); // 'semua', 'hilang', 'ditemukan'
   const [isLoading, setIsLoading] = useState(false);
+  
+  // State untuk mengontrol text input pencarian secara lokal (supaya ketikan lancar/tidak lag)
+  const [searchQuery, setSearchQuery] = useState(urlSearchQuery);
 
-  // State Pagination
+  // State Pagination (Hanya menyimpan total data dari backend, currentPage pindah ke URL)
   const [pagination, setPagination] = useState({
-    currentPage: 1,
     totalPages: 1,
     totalItems: 0
   });
@@ -32,37 +37,34 @@ function SemuaLaporan() {
   const [zoomedImage, setZoomedImage] = useState(null);
 
   // State Form Klaim
-  const [claimForm, setClaimForm] = useState({
-    catatan: "",
-    image: null,
-  });
+  const [claimForm, setClaimForm] = useState({ catatan: "", image: null });
   const [previewClaimImage, setPreviewClaimImage] = useState(null);
 
-  // --- 1. FETCH DATA DARI BACKEND DENGAN PAGINATION & FILTER ---
+  // Sync ulang kolom input jika query param 'search' di URL berubah secara eksternal
+  useEffect(() => {
+    setSearchQuery(searchParams.get("search") || "");
+  }, [searchParams]);
+
+  // --- 1. FETCH DATA DARI BACKEND BERDASARKAN URL QUERY PARAMS ---
   useEffect(() => {
     const fetchReports = async () => {
       setIsLoading(true);
       try {
-        // Buat query string
-        let url = `/api/items?page=${pagination.currentPage}&limit=8`;
+        // Susun URL API backend menggunakan variabel yang didapat dari URL frontend
+        let url = `/api/items?page=${currentPage}&limit=8`;
         
-        // Tambahkan filter tipe jika bukan 'semua'
         if (filterType !== "semua") {
           url += `&type=${filterType}`;
         }
 
-        // Opsional: Jika backend kamu mendukung pencarian teks via query param misal '&search='
-        // if (searchQuery.trim() !== "") {
-        //   url += `&search=${searchQuery}`;
-        // }
+        if (urlSearchQuery.trim() !== "") {
+          url += `&search=${encodeURIComponent(urlSearchQuery)}`;
+        }
 
         const response = await api.get(url);
-        
-        // Sesuaikan dengan format response controller yang baru kita buat
         const rawItems = response.data.data || [];
-        const meta = response.data.meta || { currentPage: 1, totalPages: 1, totalItems: 0 };
+        const meta = response.data.meta || { totalPages: 1, totalItems: 0 };
 
-        // Format data untuk UI frontend
         const formattedReports = rawItems.map((item) => {
           const isHilang = item.type === "hilang";
           const categoryName = item.Category?.name || item.category || "Lainnya";
@@ -85,7 +87,6 @@ function SemuaLaporan() {
 
         setReports(formattedReports);
         setPagination({
-          currentPage: meta.currentPage,
           totalPages: meta.totalPages || 1,
           totalItems: meta.totalItems || 0
         });
@@ -98,25 +99,36 @@ function SemuaLaporan() {
     };
 
     fetchReports();
-  }, [pagination.currentPage, filterType]); // Fetch ulang saat halaman atau filter berubah
+  }, [currentPage, filterType, urlSearchQuery]); // Trigger fetch ulang otomatis saat query param URL berubah
 
-  // --- 2. HANDLERS UI ---
+
+  // --- 2. HANDLERS UI (UPDATE URL QUERY PARAMS) ---
   const handleSearchSubmit = (e) => {
     if (e.key === "Enter" || e.type === "click") {
-      // Jika butuh trigger fetch manual untuk pencarian, reset halaman ke 1
-      setPagination(prev => ({ ...prev, currentPage: 1 }));
+      const newParams = new URLSearchParams(searchParams);
+      if (searchQuery.trim()) {
+        newParams.set("search", searchQuery);
+      } else {
+        newParams.delete("search"); // Hapus param jika kolom kosong
+      }
+      newParams.set("page", "1"); // Reset ke halaman 1 tiap cari baru
+      setSearchParams(newParams);
     }
   };
 
   const handleFilterClick = (type) => {
-    setFilterType(type);
-    setPagination(prev => ({ ...prev, currentPage: 1 })); // Reset ke halaman 1 tiap ganti filter
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set("type", type);
+    newParams.set("page", "1"); // Reset ke halaman 1 tiap ganti filter
+    setSearchParams(newParams);
   };
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= pagination.totalPages) {
-      setPagination(prev => ({ ...prev, currentPage: newPage }));
-      window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll ke atas saat ganti halaman
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set("page", newPage.toString());
+      setSearchParams(newParams);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -141,7 +153,6 @@ function SemuaLaporan() {
       alert("Terjadi kesalahan: ID Item tidak ditemukan.");
       return;
     }
-    
     if (!claimForm.catatan || claimForm.catatan.trim() === "") {
       alert("Bukti/Informasi wajib diisi secara detail!");
       return;
@@ -166,7 +177,7 @@ function SemuaLaporan() {
         setClaimForm({ catatan: "", image: null });
         setPreviewClaimImage(null);
         setSelectedReport(null);
-        window.location.reload(); // Atau panggil fetchReports() agar lebih mulus
+        window.location.reload(); 
       }
     } catch (error) {
       console.error("Error saat mengirim klaim:", error);
@@ -277,19 +288,19 @@ function SemuaLaporan() {
               {pagination.totalPages > 1 && (
                 <div className="pagination-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px', marginTop: '40px' }}>
                   <button 
-                    onClick={() => handlePageChange(pagination.currentPage - 1)}
-                    disabled={pagination.currentPage === 1}
-                    style={{ padding: '8px 12px', cursor: pagination.currentPage === 1 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    style={{ padding: '8px 12px', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
                   >
                     <ChevronLeft size={16} /> Prev
                   </button>
                   
-                  <span>Halaman <strong>{pagination.currentPage}</strong> dari {pagination.totalPages}</span>
+                  <span>Halaman <strong>{currentPage}</strong> dari {pagination.totalPages}</span>
                   
                   <button 
-                    onClick={() => handlePageChange(pagination.currentPage + 1)}
-                    disabled={pagination.currentPage === pagination.totalPages}
-                    style={{ padding: '8px 12px', cursor: pagination.currentPage === pagination.totalPages ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === pagination.totalPages}
+                    style={{ padding: '8px 12px', cursor: currentPage === pagination.totalPages ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
                   >
                     Next <ChevronRight size={16} />
                   </button>
@@ -300,7 +311,7 @@ function SemuaLaporan() {
         </div>
       </div>
 
-      {/* DETAIL MODAL (SAMA SEPERTI DASHBOARD) */}
+      {/* DETAIL MODAL */}
       {selectedReport && (
         <div className="detail-modal-bg">
           <div className="action-modal">
