@@ -1,29 +1,28 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import logo from "../assets/logo.png";
 import "../styles/report.css";
 import { Camera } from "lucide-react";
-
-// Gunakan instance Axios yang sudah dibuat
-import api from "../utils/axiosConfig";
+import api from "../utils/axiosConfig"; // Menggunakan instance Axios terpusat
 
 function BarangDitemukan() {
   const navigate = useNavigate();
 
+  // State Modal UI & Loader
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   
+  // State File Gambar & Preview
   const [previewImage, setPreviewImage] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null); 
   
-  const [profileName, setProfileName] = useState("User");
-  const [profileImage, setProfileImage] = useState(null);
+  // State Identitas User ID (Diambil langsung dari localStorage)
   const [userId, setUserId] = useState(""); 
   
   // State untuk menyimpan daftar kategori dari database
   const [categories, setCategories] = useState([]);
 
+  // State Form Isian Laporan
   const [form, setForm] = useState({
     nama: "",
     deskripsi: "",
@@ -31,25 +30,20 @@ function BarangDitemukan() {
     lokasi: "",
     tanggal: "",
     waktu: "",
-    email: "", // Ditambahkan karena validator mewajibkan field 'contact'
+    email: "", // Sinkron dengan field 'contact' di validator backend
   });
 
   useEffect(() => {
-    // Ambil info user dari localStorage
-    const name = localStorage.getItem("profileName");
-    const image = localStorage.getItem("profileImage");
+    // Ambil info dasar user dari localStorage
     const id = localStorage.getItem("userId") || "1"; 
-    
-    if (name) setProfileName(name);
-    if (image) setProfileImage(image);
-    if (id) setUserId(id);
+    setUserId(id);
     
     const savedEmail = localStorage.getItem("userEmail");
     if (savedEmail) {
       setForm((prev) => ({ ...prev, email: savedEmail }));
     }
 
-    // Ambil data kategori dari backend
+    // Ambil daftar kategori secara dinamis dari backend
     const fetchCategories = async () => {
       try {
         const response = await api.get("/api/categories");
@@ -75,7 +69,6 @@ function BarangDitemukan() {
 
   const handleUpload = (e) => {
     const file = e.target.files[0];
-
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
@@ -105,9 +98,7 @@ function BarangDitemukan() {
     setShowConfirm(true);
   };
 
-  // ==========================================================
-  // FUNGSI UNTUK MENYIMPAN DATA KE DATABASE BACKEND
-  // ==========================================================
+  // Handler simpan data multipart ke backend
   const handleYes = async () => {
     setShowConfirm(false);
     setLoading(true);
@@ -115,25 +106,21 @@ function BarangDitemukan() {
     try {
       const formData = new FormData();
       
-      // Sesuaikan key dengan validator item di backend
+      // Konstruksi payload sesuai skema Express Validator backend
       formData.append("user_id", parseInt(userId));
       formData.append("category_id", parseInt(form.kategori));
-      formData.append("type", "ditemukan"); // Set tipe secara dinamis ke 'ditemukan'
+      formData.append("type", "ditemukan"); 
       formData.append("name", form.nama);
       formData.append("description", form.deskripsi);
       formData.append("location", form.lokasi);
-      
-      // Note: Validator backend menggunakan 'lost_date' & 'lost_time' untuk kedua tipe
       formData.append("lost_date", form.tanggal); 
       formData.append("lost_time", form.waktu);
       formData.append("contact", form.email); 
 
-      // Field gambar disesuaikan dengan multer (photo_path)
       if (selectedFile) {
         formData.append("photo_path", selectedFile);
       }
 
-      // Kirim via Axios
       const response = await api.post("/api/items", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -142,9 +129,7 @@ function BarangDitemukan() {
 
       const result = response.data;
 
-      // =================================================================
-      // SINKRONISASI KE LOCALSTORAGE (DASHBOARD)
-      // =================================================================
+      // Sinkronisasi data ke LocalStorage untuk fallback visual dashboard lokal
       let imageBase64 = null;
       if (selectedFile) {
         try {
@@ -161,7 +146,7 @@ function BarangDitemukan() {
         type: "ditemukan",
         name: form.nama,
         image: imageBase64,
-        status: "Ditemukan", // Set status default tampilan
+        status: "Ditemukan", 
         category: categories.find(c => c.id === parseInt(form.kategori))?.name || "Lainnya",
         description: form.deskripsi,
         location: form.lokasi,
@@ -177,8 +162,6 @@ function BarangDitemukan() {
       
     } catch (error) {
       console.error("Error submitting report:", error);
-      
-      // Tangkap pesan error spesifik dari Express Validator
       if (error.response && error.response.data && error.response.data.errors) {
         alert(`Error Validasi: ${error.response.data.errors[0].message}`);
       } else if (error.response && error.response.data) {
@@ -193,32 +176,8 @@ function BarangDitemukan() {
 
   return (
     <div className="report-app">
-      <div className="report-topbar">
-
-        <div className="report-left-header">
-          <button className="report-back" type="button" onClick={() => navigate("/dashboard")}>
-            ←
-          </button>
-          <img src={logo} alt="Findora" className="report-logo" />
-        </div>
-
-        <div className="report-profile" onClick={() => navigate("/profile")} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "10px" }}>
-          {profileImage ? (
-            <img 
-              src={profileImage} 
-              alt="Profile" 
-              className="report-avatar" 
-              style={{ width: "35px", height: "35px", borderRadius: "50%", objectFit: "cover" }}
-            />
-          ) : (
-            <div className="report-avatar" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "35px", height: "35px", borderRadius: "50%", backgroundColor: "#e0e0e0", fontWeight: "bold" }}>
-              {profileName.charAt(0).toUpperCase()}
-            </div>
-          )}
-          <span>{profileName}</span>
-        </div>
-
-      </div>
+      
+      {/* HEADER DAN TOPBAR SEBELUMNYA DI SINI TELAH DIHAPUS PENUH KARENA SUDAH DIATUR LAYOUT UTAMA */}
 
       <div className="report-main">
         <h1 className="report-title">Laporkan Barang Ditemukan</h1>
@@ -231,6 +190,7 @@ function BarangDitemukan() {
 
           <div className="report-form-grid">
 
+            {/* FORM KOLOM KIRI */}
             <div className="report-left-form">
               <label>Nama Barang</label>
               <input type="text" name="nama" value={form.nama} onChange={handleChange} placeholder="Dompet" required />
@@ -251,7 +211,6 @@ function BarangDitemukan() {
               <label>Lokasi Penemuan</label>
               <input type="text" name="lokasi" value={form.lokasi} onChange={handleChange} placeholder="lab 203 kampus 1" required />
               
-              {/* Posisi tombol menyesuaikan layout */}
               <button 
                 className="report-submit-btn report-found-btn" 
                 type="submit"
@@ -261,6 +220,7 @@ function BarangDitemukan() {
               </button>
             </div>
 
+            {/* FORM KOLOM KANAN */}
             <div className="report-right-form">
               <label>Foto Barang (wajib)</label>
 
@@ -296,16 +256,15 @@ function BarangDitemukan() {
                 </div>
               </div>
 
-              {/* Tambahan Field Kontak karena diwajibkan oleh Validator Backend */}
               <label>Informasi Kontak Penemu (Nama/Email/No HP)</label>
               <input type="email" name="email" value={form.email} onChange={handleChange} placeholder="revalno@gmail.com" required />
-              
             </div>
 
           </div>
         </form>
       </div>
 
+      {/* MODAL KONFIRMASI */}
       {showConfirm && (
         <div className="report-modal-bg">
           <div className="report-modal report-confirm-box">
@@ -323,12 +282,13 @@ function BarangDitemukan() {
         </div>
       )}
 
+      {/* MODAL BERHASIL */}
       {showSuccess && (
         <div className="report-modal-bg">
           <div className="report-modal report-success-box">
             <div className="report-success-icon">✓</div>
             <p>Laporan berhasil terkirim</p>
-            <button type="button" className="report-close-btn" onClick={() => navigate("/dashboard")}>
+            <button type="button" className="report-close-btn" onClick={() => navigate("/")}>
               Tutup
             </button>
           </div>

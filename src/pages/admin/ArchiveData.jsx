@@ -114,29 +114,6 @@ const ArchiveData = () => {
 
   return (
     <div className="admin-layout">
-      {/* --- NAVBAR --- */}
-      <header className="mu-top-navbar">
-        <div className="mu-nav-left">
-          <button className="btn-back-nav" onClick={() => navigate(-1)}>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#5A3929" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="19" y1="12" x2="5" y2="12"></line>
-              <polyline points="12 19 5 12 12 5"></polyline>
-            </svg>
-          </button>
-          <img src={logo} alt="Logo" className="mu-logo-img" />
-          <div className="logo-text"><h2>FINDORA</h2><span>Lost & Found</span></div>
-        </div>
-        
-        <div className="mu-nav-right">
-          <div className="mu-avatar-circle">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-          </div>
-          <span className="admin-name">Admin</span>
-        </div>
-      </header>
 
       {/* --- KONTEN UTAMA --- */}
       <main className="main-content">

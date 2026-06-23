@@ -198,7 +198,7 @@ const VerificationModal = ({ isOpen, onClose }) => {
                   <td>
                     {item.Item?.photo_path ? (
                       <img 
-                        src={`http://localhost:5000/public/${item.Item.photo_path}`} 
+                        src={import.meta.env.VITE_API_URL + `/public/${item.Item.photo_path}`} 
                         alt="Barang Asli" 
                         className="img-comparison"
                       />
@@ -211,7 +211,7 @@ const VerificationModal = ({ isOpen, onClose }) => {
                   <td>
                     {item.proof_photo_path ? (
                       <img 
-                        src={`http://localhost:5000/public/${item.proof_photo_path}`} 
+                        src={import.meta.env.VITE_API_URL + `/public/${item.proof_photo_path}`} 
                         alt="Bukti Klaim" 
                         className="img-comparison"
                       />
