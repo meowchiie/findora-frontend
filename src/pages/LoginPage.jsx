@@ -53,8 +53,10 @@ function LoginPage() {
       if (response.status === 200) {
           localStorage.setItem("token", data.token);
           localStorage.setItem("profileName", data.user.nama);
+          localStorage.setItem("userPassword", password);
           localStorage.setItem("userNim", data.user.nim);
           localStorage.setItem("userEmail", data.user.email);
+          localStorage.setItem("userRole", data.user.role);
           localStorage.setItem("userId", data.user.id);
 
           // Selaraskan key profileImage tanpa embel-embel ID agar terbaca di dashboard dan profil
@@ -66,7 +68,7 @@ function LoginPage() {
             localStorage.removeItem(`profileImage_${data.user.id}`);
           }
 
-          navigate("/dashboard");
+          navigate("/");
       } else {
           setError(data.message || 'Email/NIM atau kata sandi salah.');
       }

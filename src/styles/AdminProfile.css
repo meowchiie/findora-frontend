@@ -108,6 +108,7 @@
 
 /* --- PANEL KIRI (PROFIL) --- */
 .left-panel {
+  width: 100%;
   flex: 0 0 300px;
 }
 
@@ -148,6 +149,7 @@
 
 .form-group label {
   display: block;
+  text-align: start;
   margin-bottom: 6px;
   font-size: 13px;
   color: #333;
@@ -184,18 +186,17 @@
 
 .action-buttons-profile {
   display: flex;
-  justify-content: space-between;
   gap: 15px;
   margin-top: 30px;
 }
 
 .btn-simpan-profil, .btn-keluar-profil {
-  flex: 1;
+  /* flex: 1; */
   color: white;
   border: none;
-  padding: 10px;
+  padding: 12px;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   transition: opacity 0.2s;

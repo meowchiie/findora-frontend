@@ -4,8 +4,10 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearSca
 import { Doughnut, Bar } from 'react-chartjs-2';
 import api from '../../utils/axiosConfig';
 import './AdminDashboard.css';
-import logo from '../../assets/logo.png';
 import VerificationModal from '../../components/modals/VerificationModal';
+// 1. IMPORT COMPONENT NAVBAR BARU
+import Navbar from '../../components/layout/navbar'; 
+import ActivityWidget from '../../components/widgets/ActivityWidget';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
@@ -18,7 +20,6 @@ const AdminDashboard = () => {
     bar: { labels: [], lostData: [], foundData: [] }
   });
 
-  // 1. TAMBAHKAN STATE UNTUK STATISTIK CARD
   const [stats, setStats] = useState({
     totalLost: 0,
     totalFound: 0,
@@ -32,8 +33,6 @@ const AdminDashboard = () => {
         const response = await api.get('/api/dashboard/charts');
         if (response.data.success) {
           setChartData(response.data.charts);
-          
-          // 2. SET DATA STATISTIK DARI BACKEND JIKA ADA
           if (response.data.stats) {
             setStats(response.data.stats);
           }
@@ -50,7 +49,6 @@ const AdminDashboard = () => {
     { id: '#005', name: 'Kalkulator', loc: 'Kampus 2 / 08 April 2026', status: 'Hilang', foto: 'https://via.placeholder.com/50' },
   ];
 
-  // 3. UBAH COUNT MENJADI DINAMIS MENGGUNAKAN VARIABEL STATE 'stats'
   const statsData = [
     { id: 1, title: 'Total Hilang', count: stats.totalLost, bgColor: 'bg-blue', borderColor: 'border-blue', textColor: 'text-blue', icon: (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>) },
     { id: 2, title: 'Total Ditemukan', count: stats.totalFound, bgColor: 'bg-green', borderColor: 'border-green', textColor: 'text-green', icon: (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>) },
@@ -106,31 +104,11 @@ const AdminDashboard = () => {
 
   return (
     <div className="admin-layout">
-      {/* HEADER */}
-      <header className="top-navbar">
-        <div className="nav-logo">
-          <img src={logo} alt="Logo Findora" className="logo-img" />
-          <div className="logo-text"><h2>FINDORA</h2><span>Lost & Found</span></div>
-        </div>
-        <div className="nav-center">
-          <div className="search-box">
-            <input type="text" placeholder="Search" />
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#5A3929" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="dashboard-search-icon"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          </div>
-        </div>
-        <div className="nav-profile" onClick={() => navigate('/admin/profile')} style={{ cursor: 'pointer' }}>
-          <div className="avatar-circle">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-          </div>
-          <span className="admin-name">Admin</span>
-        </div>
-      </header>
-
       {/* KONTEN UTAMA */}
       <main className="main-content">
         <h1 className="page-title">Dashboard Admin</h1>
         
-        <div className="stats-container">
+      <div className="stats-container">
           {statsData.map((stat) => (
             <div key={stat.id} className={`stat-card ${stat.borderColor}`}>
               <div className={`stat-icon ${stat.bgColor}`}>{stat.icon}</div>
@@ -169,26 +147,7 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          <div className="activity-panel">
-            <h3 className="panel-title">Aktivitas Terbaru</h3>
-            <div className="activity-list-container">
-              <ul className="activity-list">
-                {activitiesData.map((activity) => (
-                  <li key={activity.id}>
-                    <div className="activity-avatar-container">
-                      <div className="activity-avatar-placeholder">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                      </div>
-                    </div>
-                    <div className="activity-text">
-                      <p><strong>{activity.title}</strong></p>
-                      <span>{activity.time}</span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
+          <ActivityWidget/>
         </div>
       </main>
 

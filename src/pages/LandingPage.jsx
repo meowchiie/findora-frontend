@@ -31,11 +31,11 @@ function LandingPage() {
             Temukan barang berharga anda yang hilang dengan cepat dan aman
           </p>
 
-          <button className="btn" onClick={() => navigate("/login")}>
+          <button className="btn-login" onClick={() => navigate("/login")}>
             Login
           </button>
 
-          <button className="btn secondary" onClick={() => navigate("/register")}>
+          <button className="btn-register" onClick={() => navigate("/register")}>
             Registrasi
           </button>
         </div>
