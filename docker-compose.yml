@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # MySQL Database Service
+  mysql:
+    image: mysql:8.0
+    container_name: findora-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-findora_db}
+      MYSQL_USER: ${MYSQL_USER:-findora_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-findora_password}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+      interval: 10s
+    networks:
+      - findora-network
+
+  # Node.js Backend Service
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: findora-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      DB_HOST: ${DB_HOST:-mysql}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${MYSQL_DATABASE:-findora_db}
+      DB_USER: ${MYSQL_USER:-findora_user}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-findora_password}
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    networks:
+      - findora-network
+
+networks:
+  findora-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
