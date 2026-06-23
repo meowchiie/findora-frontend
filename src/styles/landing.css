@@ -2,6 +2,7 @@
   height: 100vh;
   background-size: cover;
   background-position: center;
+  font-family: 'Poppins', Times, serif;
 }
 
 .overlay {
@@ -9,82 +10,22 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background: rgba(0, 0, 0, 0.475);
+  background: rgba(0, 0, 0, 0.3); /* Selaras dengan login */
 }
 
-.card {
-  width: 380px;
-  padding: 40px;
+/* LANDING CARD: Diadopsi langsung dari gaya .login-card */
+.landing-card {
+  width: 350px;
+  padding: 30px;
   border-radius: 20px;
   text-align: center;
 
-  background: rgba(255,255,255,0.85);
+  background: rgba(255, 255, 255, 0.72);
   backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px); /* Dukungan Safari */
 
-  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-}
-
-.logo {
-  color: #ff7f55;
-  margin: 0;
-}
-
-.tagline {
-  margin: 0;
-  font-size: 14px;
-}
-
-.title {
-  margin-top: 20px;
-  font-size: 24px;       /* ubah dari default besar */
-  color: #c12a13;
-  line-height: 1.4;
-  font-weight: 600;
-}
-
-.desc {
-  margin: 15px 0;
-  font-size: 16px;       /* lebih kecil & rapi */
-  color: #f0995c;
-  line-height: 1.5;
-}
-
-.btn-login {
-  width: 100%;
-  padding: 12px;
-  margin-top: 10px;
-  border: none;
-  border-radius: 10px;
-  background: #ff7f55;
-  color: white;
-  cursor: pointer;
-
-  transition: all 0.3s ease;
-}
-
-.btn-login:hover {
-  background: #e66a45;      /* sedikit lebih gelap */
-  transform: translateY(-2px); /* naik sedikit */
-  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
-
-.btn-register {
-  width: 100%;
-  padding: 12px;
-  margin-top: 10px;
-  border: 2px solid var(--primary-color);
-  border-radius: 10px;
-  background: transparent;
-  color: black;
-  cursor: pointer;
-
-  transition: all 0.3s ease;
-}
-
-.btn-register:hover {
-  background: hsl(14, 76%, 95%, 0.2 );      /* sedikit lebih gelap */
-  transform: translateY(-2px); /* naik sedikit */
-  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  border: 2px solid #e77838; /* Border oranye khas login */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
 }
 
 .logo-container {
@@ -94,6 +35,63 @@
 }
 
 .logo-img {
-  width: 200px;   /* perbesar */
+  width: 200px;
   object-fit: contain;
+}
+
+.title {
+  margin-top: 20px;
+  font-size: 22px;
+  color: #c12a13;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.desc {
+  margin: 15px 0 25px 0;
+  font-size: 14px;
+  color: #333; /* Menggunakan warna gelap agar kontras teks di atas putih transparan lebih terbaca */
+  line-height: 1.5;
+}
+
+
+/* TOMBOL KUSTOM: Menggunakan .btn-orange bypass .btn bawaan bootstrap */
+.btn-orange {
+  width: 100%;
+  padding: 12px;
+  margin-top: 12px;
+  border: none;
+  border-radius: 10px;
+  background: transparent !important;
+  color: #e66a45 !important;
+  border: 2px solid #e66a45;
+  font-weight: 600;
+  cursor: pointer;
+  display: block;
+  transition: all 0.3s ease;
+}
+
+.btn-orange:hover {
+  background: #e66a45 !important;
+  color: white !important; /* Warna hover sedikit lebih gelap */
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.btn-orange:active {
+  transform: scale(0.98);
+}
+
+/* Tombol Registrasi (Sekunder) dibuat sedikit berbeda agar estetik, 
+   namun jika ingin tetap oranye penuh Anda bisa menghapus bagian .secondary ini */
+.btn-orange.secondary {
+  background: transparent !important;
+  color: #e66a45 !important;
+  border: 2px solid #e66a45;
+  box-sizing: border-box;
+}
+
+.btn-orange.secondary:hover {
+  background: #e66a45 !important;
+  color: white !important;
 }

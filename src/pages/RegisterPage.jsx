@@ -39,7 +39,13 @@ function RegisterPage() {
       const response = await fetch( import.meta.env.VITE_API_URL + '/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+        name: formData.nama, 
+        email: formData.email,
+        role: formData.role, 
+        nim: formData.nim,
+        password: formData.password
+        })
       });
       
       const data = await response.json();
@@ -52,8 +58,12 @@ function RegisterPage() {
         // DISINI NOTIFIKASI ERROR DARI BACKEND DITAMPILKAN
         // (Misal: "Email sudah terdaftar!", "NIM/NIP sudah digunakan!")
         // ================================================================
+        if (data.errors && data.errors.length > 0) {
+        setError(data.errors[0].message); // Mengambil pesan error pertama dari backend
+      } else {
         setError(data.message || 'Registrasi gagal. Silakan coba lagi.');
       }
+    }
     } catch (err) {
       setError('Gagal terhubung ke server. Pastikan backend menyala.');
     } finally {
