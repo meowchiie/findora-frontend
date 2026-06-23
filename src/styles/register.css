@@ -1,6 +1,7 @@
 .register-container {
   display: flex;
   height: 100vh;
+  font-family: 'Poppins', Times, serif;
 }
 
 /* LEFT (default: BG di kiri) */
@@ -39,6 +40,10 @@
   backdrop-filter: blur(10px);
 
   border: 2px solid #e77838;
+}
+
+.register-card h2 {
+  color: #c12a13;
 }
 
 /* LOGO */

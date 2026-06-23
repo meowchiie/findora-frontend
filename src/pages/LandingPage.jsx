@@ -16,8 +16,8 @@ function LandingPage() {
       }}
     >
       <div className="overlay">
-        <div className="card">
-
+        {/* Menggunakan class landing-card agar selaras dengan login-card */}
+        <div className="landing-card">
           <div className="logo-container">
             <img src={logo} alt="Findora Logo" className="logo-img" />
           </div>
@@ -31,11 +31,12 @@ function LandingPage() {
             Temukan barang berharga anda yang hilang dengan cepat dan aman
           </p>
 
-          <button className="btn" onClick={() => navigate("/login")}>
+          {/* Menambahkan class spesifik btn-orange untuk menghindari bug warna biru */}
+          <button className="btn-orange" onClick={() => navigate("/login")}>
             Login
           </button>
 
-          <button className="btn secondary" onClick={() => navigate("/register")}>
+          <button className="btn-orange secondary" onClick={() => navigate("/register")}>
             Registrasi
           </button>
         </div>

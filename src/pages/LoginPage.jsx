@@ -120,6 +120,12 @@ function LoginPage() {
               />
             </div>
 
+            <div className="forgot-container">
+              <span className="forgot-text" onClick={() => navigate("/forgot-password")}>
+                Lupa Password?
+              </span>
+            </div>
+            
             {error && (
               <div className="register-error-message">
                 <span className="error-icon">⚠️</span>
