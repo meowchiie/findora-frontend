@@ -1,29 +1,21 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { CirclePlus, Search } from "lucide-react";
-import logo from "../assets/logo.png";
+import { CirclePlus } from "lucide-react"; // Hanya import yang dibutuhkan di sini
+import api from "../utils/axiosConfig";
 import "../styles/dashboard.css";
-import api from "../utils/axiosConfig"; // Menggunakan Axios instance
+import ActivityWidget from "../components/widgets/ActivityWidget";
 
 function DashboardUser() {
   const navigate = useNavigate();
 
-  // State Profile
-  const [profileImage, setProfileImage] = useState(
-    localStorage.getItem("profileImage") || null
-  );
+  // State yang disederhanakan (Urusan pencarian & foto profil dipindah ke Navbar)
   const [profileName, setProfileName] = useState(
     localStorage.getItem("profileName") || "User"
   );
-
-  const [searchQuery, setSearchQuery] = useState("");
-
-  // State Modals & Selections
   const [selectedReport, setSelectedReport] = useState(null);
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [zoomedImage, setZoomedImage] = useState(null);
 
-  // State Laporan & Statistik
   const [reports, setReports] = useState([]);
   const [stats, setStats] = useState({
     totalLost: 0,
@@ -31,44 +23,31 @@ function DashboardUser() {
     successfulClaims: 0
   });
 
-  // State Form Inputs (Khusus Klaim sesuai alur baru)
-  const [claimForm, setClaimForm] = useState({
-    catatan: "",
-    image: null,
-  });
+  const [claimForm, setClaimForm] = useState({ catatan: "", image: null });
   const [previewClaimImage, setPreviewClaimImage] = useState(null);
 
-  // --- UNIFIED USEEFFECT: Fetch Semua Data Saat Pertama Kali Muat ---
+  // --- UNIFIED USEEFFECT ---
   useEffect(() => {
     const fetchDashboardData = async () => {
       
-      // 1. Ambil Data Profil User
+      // 1. Ambil Data Nama Profil (Hanya untuk Welcome Message)
       try {
         const userId = localStorage.getItem("userId"); 
         if (userId) {
           const response = await api.get(`/api/profile/${userId}`);
-          const data = response.data;
-          if (data) {
-            setProfileName(data.nama || "User");
-            setProfileImage(data.fotoProfil || null);
-            localStorage.setItem("profileName", data.nama || "User");
-            if (data.fotoProfil) {
-              localStorage.setItem("profileImage", data.fotoProfil);
-            } else {
-              localStorage.removeItem("profileImage");
-            }
+          if (response.data?.nama) {
+            setProfileName(response.data.nama);
+            localStorage.setItem("profileName", response.data.nama);
           }
         }
       } catch (error) {
         console.error("Gagal mengambil data profil:", error);
       }
 
-      // 2. Ambil Data Statistik Global (Mengatasi Masalah Nilai 0)
+      // 2. Ambil Data Statistik Global
       try {
-        const response = await api.get('/api/items/stats');
-        // Mengantisipasi jika data dibungkus .data atau langsung dari response
-        const statsData = response.data?.data || response.data;
-        
+        const response = await api.get('/api/dashboard/charts/user');
+        const statsData = response.data?.data;
         if (statsData) {
           setStats({
             totalLost: statsData.totalLost ?? 0,
@@ -80,33 +59,30 @@ function DashboardUser() {
         console.error("Gagal mengambil data statistik:", error);
       }
 
-      // 3. Ambil 5 Laporan Terbaru dari Database
+      // 3. Ambil Laporan Terbaru
       try {
-        const res = await api.get("/api/items?limit=5");
+        const res = await api.get("/api/items", { params: { limit: 6, status: "Menunggu" } });
         const rawItems = res.data?.data || res.data || [];
         
         const formattedReports = rawItems.map((item) => {
           const isHilang = item.type === "hilang";
-          const categoryName = item.Category?.name || item.category || "Lainnya";
-
           return {
             id: `${item.type}-${item.id}`,
             dbId: item.id,
             name: item.name || "Tanpa Nama",
             description: item.description || "",
-            category: categoryName,
+            category: item.Category?.name || item.category || "Lainnya",
             location: item.location || "-",
-            date: item.lost_date ? (item.lost_date.includes("T") ? item.lost_date.split("T")[0] : item.lost_date) : "-", 
+            date: item.lost_date ? item.lost_date.split("T")[0] : "-", 
             time: item.lost_time || "-",
             contact: item.contact || "-",
-            image: item.photo_path ? `http://localhost:5000/public/${item.photo_path.replace(/\\/g, '/')}` : null,
+            image: item.photo_path ? import.meta.env.VITE_API_URL + `/public/${item.photo_path.replace(/\\/g, '/')}` : null,
             status: isHilang ? "Hilang" : "Ditemukan",
             type: isHilang ? "hilang" : "ditemukan",
             createdAt: item.createdAt ? new Date(item.createdAt) : new Date()
           };
         });
 
-        // Urutkan berdasarkan yang paling baru
         const sortedReports = formattedReports.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
         setReports(sortedReports);
       } catch (error) {
@@ -116,17 +92,6 @@ function DashboardUser() {
 
     fetchDashboardData();
   }, []);
-
-  // Fungsi Search
-  const handleSearchSubmit = (e) => {
-    if (e.key === "Enter" || e.type === "click") {
-      if (searchQuery.trim() !== "") {
-        navigate("/semua-laporan", { state: { keyword: searchQuery } });
-      } else {
-        navigate("/semua-laporan");
-      }
-    }
-  };
 
   // Mock Data Aktivitas Sampingan
   const activities = [
@@ -156,7 +121,6 @@ function DashboardUser() {
       alert("Terjadi kesalahan: ID Item tidak ditemukan.");
       return;
     }
-    
     if (!claimForm.catatan || claimForm.catatan.trim() === "") {
       alert("Bukti/Informasi wajib diisi secara detail!");
       return;
@@ -185,12 +149,7 @@ function DashboardUser() {
       }
     } catch (error) {
       console.error("Error saat mengirim klaim:", error);
-      if (error.response?.data?.errors) {
-        const errorMessages = error.response.data.errors.map(err => err.msg).join("\n");
-        alert(`Gagal mengirim klaim:\n${errorMessages}`);
-      } else {
-        alert(error.response?.data?.message || "Terjadi kesalahan koneksi saat mengirim klaim.");
-      }
+      alert("Terjadi kesalahan koneksi saat mengirim klaim.");
     }
   };
 
@@ -198,36 +157,10 @@ function DashboardUser() {
     <div className="dashboard-page">
       <div className="dashboard-container">
 
-        {/* TOPBAR */}
-        <div className="dashboard-topbar">
-          <img src={logo} alt="Findora Logo" className="dashboard-logo" />
-
-          <div className="search-box">
-            <input 
-              type="text" 
-              placeholder="Search" 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={handleSearchSubmit} 
-            />
-            <Search size={18} className="search-icon" style={{ cursor: "pointer" }} onClick={handleSearchSubmit} />
-          </div>
-
-          <div className="dashboard-profile" onClick={() => navigate("/profile")}>
-            <div className="dashboard-avatar">
-              {profileImage ? (
-                <img src={profileImage} alt="Profile" className="dashboard-avatar-img" />
-              ) : (
-                <span className="dashboard-avatar-icon">👤</span>
-              )}
-            </div>
-            <span className="dashboard-profile-name">{profileName}</span>
-          </div>
-        </div>
+        {/* KODE TOPBAR LAMA TELAH DIHAPUS SEPENUHNYA KARENA DIATUR OLEH MAINLAYOUT */}
 
         {/* MAIN SECTION */}
         <div className="dashboard-main">
-          
           <section className="welcome-section">
             <h1>Selamat Datang, {profileName}!</h1>
             <p>Temukan barang anda atau bantu sesama hari ini.</p>
@@ -244,11 +177,9 @@ function DashboardUser() {
 
           {/* GRID CONTENT */}
           <div className="dashboard-grid">
-            
             {/* LEFT COLUMN */}
             <div className="dashboard-left">
-              
-              {/* STATISTIK DINAMIS GLOBAL */}
+              {/* STATISTIK */}
               <section className="stats-card">
                 <h2>Statistik Keseluruhan</h2>
                 <div className="stats-row">
@@ -291,7 +222,6 @@ function DashboardUser() {
                         <p><strong>Kategori:</strong> {item.category}</p>
                         <p><strong>Lokasi:</strong> {item.location}</p>
                         <p><strong>Tanggal:</strong> {item.date}</p>
-                        
                         <span className={`report-status ${item.type === 'hilang' ? 'status-blue' : 'status-green'}`}>
                           {item.status}
                         </span>
@@ -307,20 +237,7 @@ function DashboardUser() {
             </div>
 
             {/* RIGHT COLUMN (ACTIVITY SIDEBAR) */}
-            <aside className="activity-panel">
-              <h2>Aktivitas</h2>
-              {activities.map((item, index) => (
-                <div className="activity-row" key={index}>
-                  <div className="activity-avatar">👤</div>
-                  <div>
-                    <h3>{item.title}</h3>
-                    <p>{item.status}</p>
-                    <small>{item.time}</small>
-                  </div>
-                </div>
-              ))}
-            </aside>
-
+            <ActivityWidget />
           </div>
         </div>
       </div>
@@ -341,7 +258,6 @@ function DashboardUser() {
             <div className={`detail-status ${selectedReport.type === 'hilang' ? 'status-blue' : 'status-green'}`}>
               {selectedReport.status}
             </div>
-
             <div className="detail-info">
               <p><strong>Kategori:</strong> {selectedReport.category}</p>
               <p><strong>Deskripsi:</strong> {selectedReport.description}</p>
@@ -350,21 +266,17 @@ function DashboardUser() {
               <p><strong>Waktu:</strong> {selectedReport.time}</p>
               <p><strong>Kontak:</strong> {selectedReport.contact}</p>
             </div>
-
-            {selectedReport.type === "hilang" ? (
-              <button className="detail-action-btn" onClick={() => setShowClaimModal(true)}>
-                Saya Menemukan Barang Ini
-              </button>
-            ) : (
-              <button className="detail-action-btn" style={{ backgroundColor: "#28a745" }} onClick={() => setShowClaimModal(true)}>
-                Ini Barang Saya (Klaim)
-              </button>
-            )}
+            <button 
+              className="detail-action-btn" 
+              onClick={() => setShowClaimModal(true)}
+            >
+              {selectedReport.type === "hilang" ? "Saya Menemukan Barang Ini" : "Ini Barang Saya (Klaim)"}
+            </button>
           </div>
         </div>
       )}
 
-      {/* MODAL KLAIM BARANG (DINAMIS SEMENTARA SESUAI ALUR BARU) */}
+      {/* MODAL KLAIM BARANG */}
       {showClaimModal && (
         <div className="detail-modal-bg">
           <div className="claim-popup">
@@ -401,7 +313,6 @@ function DashboardUser() {
           <img src={zoomedImage} alt="Fullscreen Preview" style={{ maxWidth: "90%", maxHeight: "90%", objectFit: "contain", borderRadius: "8px" }} />
         </div>
       )}
-
     </div>
   );
 }

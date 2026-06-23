@@ -1,26 +1,28 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import logo from "../assets/logo.png";
 import "../styles/report.css";
 import { Camera } from "lucide-react";
-
-import api from "../utils/axiosConfig"; 
+import api from "../utils/axiosConfig"; // Menggunakan instance Axios terpusat
 
 function BarangHilang() {
   const navigate = useNavigate();
+  
+  // State Modal UI & Loader
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
+  // State File Gambar & Preview
   const [previewImage, setPreviewImage] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
-  const [loading, setLoading] = useState(false);
 
-  const [profileName, setProfileName] = useState("User");
-  const [profileImage, setProfileImage] = useState(null);
+  // State Identitas User ID (Diambil langsung dari localStorage)
   const [userId, setUserId] = useState(""); 
   
-  // 1. TAMBAHKAN STATE BARU UNTUK KATEGORI
+  // State untuk menyimpan daftar kategori dari database
   const [categories, setCategories] = useState([]);
 
+  // State Form Isian Laporan
   const [form, setForm] = useState({
     nama: "",
     deskripsi: "",
@@ -32,26 +34,19 @@ function BarangHilang() {
   });
 
   useEffect(() => {
-    // Ambil data user dari local storage
-    const name = localStorage.getItem("profileName");
-    const image = localStorage.getItem("profileImage");
+    // Ambil info dasar user dari local storage
     const id = localStorage.getItem("userId") || "1"; 
-    
-    if (name) setProfileName(name);
-    if (image) setProfileImage(image);
-    if (id) setUserId(id);
+    setUserId(id);
     
     const savedEmail = localStorage.getItem("userEmail");
     if (savedEmail) {
       setForm((prev) => ({ ...prev, email: savedEmail }));
     }
 
-    // 2. FUNGSI UNTUK MENGAMBIL DATA KATEGORI DARI BACKEND
+    // Ambil daftar kategori secara dinamis dari backend
     const fetchCategories = async () => {
       try {
         const response = await api.get("/api/categories");
-        // Sesuaikan dengan struktur response dari Controller kamu
-        // Asumsi struktur standarnya: { success: true, data: [...] }
         if (response.data && response.data.data) {
           setCategories(response.data.data);
         } else if (Array.isArray(response.data)) {
@@ -62,7 +57,7 @@ function BarangHilang() {
       }
     };
 
-    fetchCategories(); // Jalankan fungsi saat komponen pertama kali dimuat
+    fetchCategories(); 
   }, []);
 
   const handleChange = (e) => {
@@ -99,6 +94,8 @@ function BarangHilang() {
     setShowConfirm(true);
   };
 
+  // Handler simpan data multipart ke backend
+  // Handler simpan data multipart ke backend
   const handleYes = async () => {
     setShowConfirm(false);
     setLoading(true);
@@ -106,6 +103,7 @@ function BarangHilang() {
     try {
       const formData = new FormData();
       
+      // Konstruksi payload sesuai skema Express Validator backend
       formData.append("user_id", parseInt(userId)); 
       formData.append("category_id", parseInt(form.kategori)); 
       formData.append("type", "hilang"); 
@@ -128,15 +126,10 @@ function BarangHilang() {
 
       const result = response.data;
 
-      // SINKRONISASI KE LOCALSTORAGE (DASHBOARD)
-      let imageBase64 = null;
-      if (selectedFile) {
-        try {
-          imageBase64 = await convertFileToBase64(selectedFile);
-        } catch (err) {
-          console.error("Gagal mengonversi gambar ke base64:", err);
-        }
-      }
+      // --- PERBAIKAN DI SINI: Hapus logika convertFileToBase64 ---
+      // Ambil path gambar yang disimpan di backend server (asumsi key-nya: photo_path)
+      const serverImagePath = result.data?.photo_path || "";
+      const fullImageUrl = serverImagePath ? import.meta.env.VITE_API_URL + `/public${serverImagePath}` : null;
 
       const existingReports = JSON.parse(localStorage.getItem("allReports") || "[]");
 
@@ -144,9 +137,8 @@ function BarangHilang() {
         id: result.data?.id || Date.now(),
         type: "hilang",
         name: form.nama,
-        image: imageBase64, 
+        image: fullImageUrl, // SEKARANG BERISI URL STRING RINGAN, BUKAN BASE64 YANG BERAT!
         status: "Menunggu", 
-        // Mengubah ID kembali menjadi Nama Kategori untuk tampilan di Dashboard
         category: categories.find(c => c.id === parseInt(form.kategori))?.name || "Lainnya", 
         description: form.deskripsi,
         location: form.lokasi,
@@ -157,12 +149,12 @@ function BarangHilang() {
 
       existingReports.push(newReportItem);
       localStorage.setItem("allReports", JSON.stringify(existingReports));
+      // -----------------------------------------------------------
 
       setShowSuccess(true);
       
     } catch (error) {
       console.error("Error submitting report:", error);
-      
       if (error.response && error.response.data && error.response.data.errors) {
         alert(`Error Validasi: ${error.response.data.errors[0].message}`);
       } else if (error.response && error.response.data) {
@@ -177,23 +169,8 @@ function BarangHilang() {
 
   return (
     <div className="report-app">
-      <div className="report-topbar">
-        <div className="report-left-header">
-          <button className="report-back" type="button" onClick={() => navigate("/dashboard")}>←</button>
-          <img src={logo} alt="Findora" className="report-logo" />
-        </div>
-
-        <div className="report-profile" onClick={() => navigate("/profile")} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "10px" }}>
-          {profileImage ? (
-            <img src={profileImage} alt="Profile" className="report-avatar" style={{ width: "35px", height: "35px", borderRadius: "50%", objectFit: "cover" }} />
-          ) : (
-            <div className="report-avatar" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "35px", height: "35px", borderRadius: "50%", backgroundColor: "#e0e0e0", fontWeight: "bold" }}>
-              {profileName.charAt(0).toUpperCase()}
-            </div>
-          )}
-          <span>{profileName}</span>
-        </div>
-      </div>
+      
+      {/* HEADER DAN TOPBAR SEBELUMNYA DI SINI TELAH DIHAPUS PENUH KARENA SUDAH DIATUR LAYOUT UTAMA */}
 
       <div className="report-main">
         <h1>Laporkan Barang Hilang</h1>
@@ -204,6 +181,8 @@ function BarangHilang() {
           </p>
 
           <div className="report-form-grid">
+            
+            {/* FORM KOLOM KIRI */}
             <div className="report-left-form">
               <label>Nama Barang</label>
               <input type="text" name="nama" value={form.nama} onChange={handleChange} placeholder="Dompet" required />
@@ -212,13 +191,7 @@ function BarangHilang() {
               <textarea name="deskripsi" value={form.deskripsi} onChange={handleChange} placeholder="warna hitam polos, didalamnya ada KTP" required />
 
               <label>Kategori Barang</label>
-              {/* 3. MAPPING DATA KATEGORI KE DALAM OPTION DROPDOWN */}
-              <select
-                name="kategori"
-                value={form.kategori}
-                onChange={handleChange}
-                required
-              >
+              <select name="kategori" value={form.kategori} onChange={handleChange} required>
                 <option value="" disabled>Pilih Kategori</option>
                 {categories.map((cat) => (
                   <option key={cat.id} value={cat.id}>
@@ -235,6 +208,7 @@ function BarangHilang() {
               </button>
             </div>
 
+            {/* FORM KOLOM KANAN */}
             <div className="report-right-form">
               <label>Foto Barang (opsional, sangat disarankan)</label>
 
@@ -274,6 +248,7 @@ function BarangHilang() {
         </form>
       </div>
 
+      {/* MODAL KONFIRMASI */}
       {showConfirm && (
         <div className="report-modal-bg">
           <div className="report-modal report-confirm-box">
@@ -287,12 +262,13 @@ function BarangHilang() {
         </div>
       )}
 
+      {/* MODAL BERHASIL */}
       {showSuccess && (
         <div className="report-modal-bg">
           <div className="report-modal report-success-box">
             <div className="report-success-icon">✓</div>
             <p>Laporan berhasil terkirim</p>
-            <button type="button" className="report-close-btn" onClick={() => navigate("/dashboard")}>Tutup</button>
+            <button type="button" className="report-close-btn" onClick={() => navigate("/")}>Tutup</button>
           </div>
         </div>
       )}

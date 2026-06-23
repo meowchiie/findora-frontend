@@ -1,19 +1,17 @@
 import { useState, useEffect } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom"; // Tambahkan useSearchParams
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { useLocation, useSearchParams } from "react-router-dom"; // Hapus useNavigate jika tidak dipakai lagi di sini
+import { ChevronLeft, ChevronRight } from "lucide-react"; // Hapus Search karena sudah di pindah ke Navbar
 import api from "../utils/axiosConfig";
-import logo from "../assets/logo.png";
 import "../styles/dashboard.css"; 
 import "../styles/semuaLaporan.css"; 
 
 function SemuaLaporan() {
-  const navigate = useNavigate();
   const location = useLocation();
   
-  // 1. Inisialisasi useSearchParams untuk membaca dan menulis query param di URL
+  // 1. Inisialisasi useSearchParams untuk membaca query param di URL
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // 2. Ambil nilai langsung dari URL query params (berikan fallback jika kosong)
+  // 2. Ambil nilai langsung dari URL query params atau state kiriman dari Navbar
   const currentPage = parseInt(searchParams.get("page")) || 1;
   const filterType = searchParams.get("type") || "semua";
   const urlSearchQuery = searchParams.get("search") || location.state?.keyword || "";
@@ -21,11 +19,8 @@ function SemuaLaporan() {
   // State Data & API
   const [reports, setReports] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  
-  // State untuk mengontrol text input pencarian secara lokal (supaya ketikan lancar/tidak lag)
-  const [searchQuery, setSearchQuery] = useState(urlSearchQuery);
 
-  // State Pagination (Hanya menyimpan total data dari backend, currentPage pindah ke URL)
+  // State Pagination
   const [pagination, setPagination] = useState({
     totalPages: 1,
     totalItems: 0
@@ -40,18 +35,12 @@ function SemuaLaporan() {
   const [claimForm, setClaimForm] = useState({ catatan: "", image: null });
   const [previewClaimImage, setPreviewClaimImage] = useState(null);
 
-  // Sync ulang kolom input jika query param 'search' di URL berubah secara eksternal
-  useEffect(() => {
-    setSearchQuery(searchParams.get("search") || "");
-  }, [searchParams]);
-
   // --- 1. FETCH DATA DARI BACKEND BERDASARKAN URL QUERY PARAMS ---
   useEffect(() => {
     const fetchReports = async () => {
       setIsLoading(true);
       try {
-        // Susun URL API backend menggunakan variabel yang didapat dari URL frontend
-        let url = `/api/items?page=${currentPage}&limit=8`;
+        let url = `/api/items?page=${currentPage}&limit=8&status=Menunggu`;
         
         if (filterType !== "semua") {
           url += `&type=${filterType}`;
@@ -79,7 +68,7 @@ function SemuaLaporan() {
             date: item.lost_date ? (item.lost_date.includes("T") ? item.lost_date.split("T")[0] : item.lost_date) : "-", 
             time: item.lost_time || "-",
             contact: item.contact || "-",
-            image: item.photo_path ? `http://localhost:5000/public/${item.photo_path.replace(/\\/g, '/')}` : null,
+            image: item.photo_path ? import.meta.env.VITE_API_URL + `/public/${item.photo_path.replace(/\\/g, '/')}` : null,
             status: isHilang ? "Hilang" : "Ditemukan",
             type: isHilang ? "hilang" : "ditemukan",
           };
@@ -99,23 +88,10 @@ function SemuaLaporan() {
     };
 
     fetchReports();
-  }, [currentPage, filterType, urlSearchQuery]); // Trigger fetch ulang otomatis saat query param URL berubah
+  }, [currentPage, filterType, urlSearchQuery]); // Otomatis trigger fetch ulang saat ketikan di Navbar berubah
 
 
   // --- 2. HANDLERS UI (UPDATE URL QUERY PARAMS) ---
-  const handleSearchSubmit = (e) => {
-    if (e.key === "Enter" || e.type === "click") {
-      const newParams = new URLSearchParams(searchParams);
-      if (searchQuery.trim()) {
-        newParams.set("search", searchQuery);
-      } else {
-        newParams.delete("search"); // Hapus param jika kolom kosong
-      }
-      newParams.set("page", "1"); // Reset ke halaman 1 tiap cari baru
-      setSearchParams(newParams);
-    }
-  };
-
   const handleFilterClick = (type) => {
     const newParams = new URLSearchParams(searchParams);
     newParams.set("type", type);
@@ -181,12 +157,7 @@ function SemuaLaporan() {
       }
     } catch (error) {
       console.error("Error saat mengirim klaim:", error);
-      if (error.response?.data?.errors) {
-        const errorMessages = error.response.data.errors.map(err => err.msg).join("\n");
-        alert(`Gagal mengirim klaim:\n${errorMessages}`);
-      } else {
-        alert(error.response?.data?.message || "Terjadi kesalahan koneksi saat mengirim klaim.");
-      }
+      alert("Terjadi kesalahan koneksi saat mengirim klaim.");
     }
   };
 
@@ -194,34 +165,14 @@ function SemuaLaporan() {
     <div className="dashboard-page">
       <div className="dashboard-container">
         
-        {/* TOPBAR */}
-        <div className="dashboard-topbar">
-          <div className="topbar-left" onClick={() => navigate("/dashboard")} style={{ cursor: "pointer" }}>
-            <span className="back-arrow">←</span>
-            <img className="dashboard-logo" src={logo} alt="Findora Logo" />
-          </div>
-          
-          <div className="search-box">
-            <input 
-              type="text" 
-              placeholder="Cari barang..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={handleSearchSubmit} 
-            />
-            <Search size={18} className="search-icon" style={{ cursor: "pointer" }} onClick={handleSearchSubmit} />
-          </div>
-
-          <div className="dashboard-profile" onClick={() => navigate("/profile")}>
-             <div className="dashboard-avatar">👤</div>
-          </div>
-        </div>
+        {/* KODE TOPBAR LAMA DI SINI SEKARANG SUDAH DIHAPUS SEPENUHNYA */}
 
         {/* MAIN SECTION */}
         <div className="semua-main" style={{ padding: '20px 40px' }}>
           
           <div className="semua-topbar" style={{ marginBottom: '20px' }}>
             <h1>Semua Laporan</h1>
+            {urlSearchQuery && <p style={{ color: '#007bff' }}>Hasil pencarian untuk: "<strong>{urlSearchQuery}</strong>"</p>}
             <p style={{ color: '#666' }}>Total data: {pagination.totalItems} Laporan</p>
           </div>
 

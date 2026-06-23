@@ -8,7 +8,7 @@ function RegisterPage() {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    nama: '',
+    name: '',
     email: '',
     role: '',
     nim: '',
@@ -22,7 +22,7 @@ function RegisterPage() {
     setError('');
 
     // 1. Validasi field kosong
-    if (!formData.nama || !formData.email || !formData.role || !formData.nim || !formData.password || formData.role === "Pilih Hak Akses") {
+    if (!formData.name || !formData.email || !formData.role || !formData.nim || !formData.password || formData.role === "Pilih Peran") {
       setError("Semua field wajib diisi!");
       return;
     }
@@ -36,7 +36,7 @@ function RegisterPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/register', {
+      const response = await fetch( import.meta.env.VITE_API_URL + '/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -80,12 +80,12 @@ function RegisterPage() {
             <img src={logo} alt="logo" className="register-logo" />
             <h2>Daftar Akun</h2>
 
-            <label>Nama Lengkap</label>
+            <label>Name Lengkap</label>
             <input 
               type="text" 
               placeholder="Nama lengkap" 
-              value={formData.nama}
-              onChange={(e) => setFormData({...formData, nama: e.target.value})}
+              value={formData.name}
+              onChange={(e) => setFormData({...formData, name: e.target.value})}
             />
 
             <label>Email</label>
@@ -96,13 +96,13 @@ function RegisterPage() {
               onChange={(e) => setFormData({...formData, email: e.target.value})}
             />
 
-            <label>Hak Akses</label>
+            <label>Peran</label>
             <select 
               className="select" 
               value={formData.role}
               onChange={(e) => setFormData({...formData, role: e.target.value})}
             >
-              <option>Pilih Hak Akses</option>
+              <option>Pilih Peran</option>
               <option>Mahasiswa</option>
               <option>Dosen</option>
               <option>Staff</option>
