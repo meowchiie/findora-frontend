@@ -45,7 +45,7 @@ function RegisterPage() {
         password: formData.password
       });
       
-      const data = await response.json();
+      const data = await response.data;
 
       if (response.status === 201) {
         alert("Registrasi Berhasil! Silakan Login.");
@@ -132,7 +132,7 @@ function RegisterPage() {
             )}
 
             <button 
-              className="register-btn" 
+              className="register-button" 
               onClick={handleSubmit} 
               disabled={loading}
               style={{ opacity: loading ? 0.7 : 1, cursor: loading ? "not-allowed" : "pointer" }}

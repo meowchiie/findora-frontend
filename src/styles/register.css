@@ -121,25 +121,25 @@
 }
 
 /* BUTTON */
-.register-btn {
+.register-button {
   width: 100%;
   margin-top: 20px;
   padding: 12px;
   border: none;
   border-radius: 10px;
-  background: var(--primary-color);
+  background-color: #ff7f55;
   color: white;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
-.register-btn:hover {
+.register-button:hover {
   background: #e66a45;
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(0,0,0,0.2);
 }
 
-.register-btn:active {
+.register-button:active {
   transform: scale(0.98);
 }
 
