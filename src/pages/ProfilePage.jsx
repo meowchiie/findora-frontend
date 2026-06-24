@@ -102,7 +102,7 @@ function ProfilePage() {
             ? (item.lost_date.includes("T") ? item.lost_date.split("T")[0] : item.lost_date)
             : new Date(item.createdAt).toLocaleDateString("id-ID"),
           // Tambahan field pelengkap agar modal detail terisi dengan benar:
-          image: item.photo_path ? `${import.meta.env.VITE_API_URL}${item.photo_path}` : null,
+          image: item.photo_path ? `${import.meta.env.VITE_API_URL}/public/${item.photo_path}` : null,
           category: item.category || item.Category?.name || "Umum",
           description: item.description || "Tidak ada deskripsi",
           location: item.location || "Tidak diketahui",
