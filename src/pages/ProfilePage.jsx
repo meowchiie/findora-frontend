@@ -71,9 +71,11 @@ function ProfilePage() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [showPasswords, setShowPasswords] = useState({ old: false, new: false });
 
-  // State Laporan
+  // State Laporan & Pop-up Detail
   const [userReports, setUserReports] = useState([]);
   const [isFetchingReports, setIsFetchingReports] = useState(false);
+  const [selectedReport, setSelectedReport] = useState(null); // State untuk modal detail barang
+  const [zoomedImage, setZoomedImage] = useState(null);       // State jika gambar detail di-klik zoom
 
   // Handle Perubahan Input Form Dinamis
   const handleInputChange = (e) => {
@@ -95,9 +97,17 @@ function ProfilePage() {
           id: item.id,
           name: item.name || "Tanpa Nama",
           status: item.status || (activeTab === "hilang" ? "HILANG" : "DITEMUKAN"),
+          type: item.type || activeTab,
           date: item.lost_date 
             ? (item.lost_date.includes("T") ? item.lost_date.split("T")[0] : item.lost_date)
-            : new Date(item.createdAt).toLocaleDateString("id-ID")
+            : new Date(item.createdAt).toLocaleDateString("id-ID"),
+          // Tambahan field pelengkap agar modal detail terisi dengan benar:
+          image: item.photo_path ? `${import.meta.env.VITE_API_URL}${item.photo_path}` : null,
+          category: item.category || item.Category?.name || "Umum",
+          description: item.description || "Tidak ada deskripsi",
+          location: item.location || "Tidak diketahui",
+          time: item.lost_time || "-",
+          contact: item.contact || "-"
         }));
         setUserReports(formatted);
       } catch (error) {
@@ -156,7 +166,6 @@ function ProfilePage() {
   const handleSaveCrop = async () => {
     try {
       const croppedImageBase64 = await getCroppedImg(imageSrc, croppedAreaPixels);
-      // PERBAIKAN: Langsung simpan string Base64 ke profileImage agar UI langsung terupdate secara lokal
       setProfileImage(croppedImageBase64); 
       setShowCropModal(false);
     } catch (e) {
@@ -204,7 +213,6 @@ function ProfilePage() {
         formDataToSend.append("passwordBaru", passwords.new);
       }
 
-      // Jika profileImage bertipe base64 (artinya ada gambar baru yang dicrop)
       if (profileImage && profileImage.startsWith("data:image")) {
         const imageBlob = base64ToBlob(profileImage);
         formDataToSend.append("fotoProfil", imageBlob, "profile.jpg");
@@ -218,15 +226,13 @@ function ProfilePage() {
         setIsChangingPassword(false);
       }
 
-      // Sinkronisasi Gambar dari Response Backend
       const serverImagePath = response.data?.profile_picture || response.data?.data?.profile_picture;
       if (serverImagePath) {
         const fullImageUrl =  import.meta.env.VITE_API_URL + `/public${serverImagePath}`;
-        setProfileImage(fullImageUrl); // Override data base64 dengan URL Server yang Valid
+        setProfileImage(fullImageUrl); 
         localStorage.setItem(`profileImage_${userId}`, fullImageUrl);
         localStorage.setItem("profileImage", fullImageUrl);
       } else if (profileImage && profileImage.startsWith("data:image")) {
-        // Fallback jika backend sukses tapi tidak mengembalikan path gambar baru
         localStorage.setItem("profileImage", profileImage);
       }
 
@@ -246,7 +252,7 @@ function ProfilePage() {
   };
 
   const handleLogout = () => {
-    localStorage.clear(); // Praktik terbaik: bersihkan seluruh session storage aplikasi
+    localStorage.clear(); 
     setShowLogoutConfirm(false);
     navigate("/login");
   };
@@ -266,7 +272,6 @@ function ProfilePage() {
             <input type="file" accept="image/*" className="photo-input" onChange={handlePhotoChange} />
           </label>
 
-          {/* Penggunaan Sub-Komponen yang Bersih & Ringkas */}
           <ProfileInputField 
             label="Nama Lengkap" name="nama" value={formData.nama} 
             isEditing={editStates.nama} onChange={handleInputChange} 
@@ -283,7 +288,6 @@ function ProfilePage() {
             onToggleEdit={() => setEditStates(prev => ({ ...prev, nim: !prev.nim }))} 
           />
 
-          {/* Bagian Password */}
           <div className="password-section" style={{ marginTop: "15px", borderTop: "1px solid #eee", paddingTop: "10px" }}>
             {!isChangingPassword ? (
               <button type="button" className="change-pw-toggle-btn" onClick={() => setIsChangingPassword(true)} style={{ background: "none", color: "#007bff", border: "none", cursor: "pointer", padding: 0, fontWeight: "500" }}>
@@ -340,7 +344,8 @@ function ProfilePage() {
                   <p>Status: <span className={`status ${item.status.toUpperCase() === "SELESAI" ? "claim" : "lost"}`}>{item.status}</span></p>
                   <p>Tanggal: {item.date}</p>
                 </div>
-                <button className="detail-btn" type="button" onClick={() => navigate(`/semua-laporan`)}>Lihat Detail</button>
+                {/* DIUBAH: Mengganti navigasi halaman menjadi pemicu open modal detail */}
+                <button className="detail-btn" type="button" onClick={() => setSelectedReport(item)}>Lihat Detail</button>
               </div>
             ))
           ) : (
@@ -348,6 +353,47 @@ function ProfilePage() {
           )}
         </div>
       </div>
+
+      {/* ==================== POPUP/MODAL DETAIL BARANG ==================== */}
+      {selectedReport && (
+        <div className="detail-modal-bg" style={{ display: "flex", position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", zIndex: 999 }}>
+          <div className="action-modal" style={{ position: "relative", backgroundColor: "#fff", padding: "20px", borderRadius: "8px", maxWidth: "500px", width: "90%", maxHeight: "95vh", overflowY: "auto" }}>
+            <button className="close-detail" onClick={() => setSelectedReport(null)} style={{ position: "absolute", top: "10px", right: "15px", background: "none", border: "none", fontSize: "18px", cursor: "pointer" }}>✕</button>
+            
+            <div className="detail-image" style={{ width: "100%", height: "200px", backgroundColor: "#f0f0f0", display: "flex", justifyContent: "center", alignItems: "center", borderRadius: "8px", overflow: "hidden", marginBottom: "15px" }}>
+              {selectedReport.image ? (
+                <img src={selectedReport.image} alt={selectedReport.name} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "8px", cursor: "zoom-in" }} onClick={() => setZoomedImage(selectedReport.image)} />
+              ) : (
+                <span style={{ fontSize: "48px" }}>📦</span>
+              )}
+            </div>
+            
+            <h2>{selectedReport.name}</h2>
+            <div className={`detail-status ${selectedReport.type === 'hilang' ? 'status-blue' : 'status-green'}`}>
+              {selectedReport.status}
+            </div>
+            
+            <div className="detail-info" style={{ marginTop: "15px", textAlign: "left" }}>
+              <p><strong>Kategori:</strong> {selectedReport.category}</p>
+              <p><strong>Deskripsi:</strong> {selectedReport.description}</p>
+              <p><strong>Lokasi:</strong> {selectedReport.location}</p>
+              <p><strong>Tanggal:</strong> {selectedReport.date}</p>
+              <p><strong>Waktu:</strong> {selectedReport.time}</p>
+              <p><strong>Kontak:</strong> {selectedReport.contact}</p>
+            </div>
+            {/* Tombol Klaim Berhasil Dihilangkan Sesuai Permintaan */}
+          </div>
+        </div>
+      )}
+
+      {/* ==================== POPUP ZOOM GAMBAR BARANG ==================== */}
+      {zoomedImage && (
+        <div className="profile-modal-bg" onClick={() => setZoomedImage(null)} style={{ zIndex: 1050, display: "flex", justifyContent: "center", alignItems: "center" }}>
+          <div style={{ maxWidth: "90%", maxHeight: "90%" }}>
+            <img src={zoomedImage} alt="Zoomed" style={{ width: "100%", height: "auto", maxHeight: "85vh", objectFit: "contain", borderRadius: "8px" }} />
+          </div>
+        </div>
+      )}
 
       {/* MODAL CROPPER */}
       {showCropModal && (
@@ -370,7 +416,7 @@ function ProfilePage() {
         </div>
       )}
 
-      {/* POPUP SUKSES & LOGOUT (Dipertahankan) */}
+      {/* POPUP SUKSES & LOGOUT */}
       {showSuccessPopup && (
         <div className="profile-modal-bg">
           <div className="logout-modal" style={{ borderTop: "5px solid #28a745" }}>
