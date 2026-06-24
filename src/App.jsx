@@ -24,6 +24,7 @@ function App() {
         <Route element={<RequireGuest />}>
           <Route path="/home" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/register" element={<RegisterPage />} />
         </Route>
 

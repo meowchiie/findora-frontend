@@ -4,6 +4,7 @@ import logo from "../assets/logo.png";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import axios from "axios";
+import api from "../utils/axiosConfig";
 
 function ForgotPasswordPage() {
   const navigate = useNavigate();
@@ -23,7 +24,7 @@ function ForgotPasswordPage() {
 
     try {
       // Sesuaikan URL endpoint ini dengan backend Express Anda nanti
-      const response = await axios.post('http://127.0.0.1:5000/api/forgot-password', { email });
+      const response = await api.post('/api/forgot-password', { email });
       
       if (response.status === 200) {
         setMessage('Link instruksi reset password telah dikirim ke email Anda.');
