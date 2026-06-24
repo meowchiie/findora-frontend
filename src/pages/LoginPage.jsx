@@ -3,8 +3,7 @@ import bg from "../assets/ith_bg.jpg";
 import logo from "../assets/logo.png";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import axios from "axios"; 
-
+import api from "../utils/axiosConfig"
 function LoginPage() {
   const navigate = useNavigate();
   
@@ -42,7 +41,7 @@ function LoginPage() {
 
     try {
       // Mengirim properti 'identifier' (bisa berisi email atau nim) ke backend Express
-      const response = await axios.post('http://127.0.0.1:5000/api/login', {
+      const response = await api.post('/api/login', {
         identifier, 
         password
       });
