@@ -3,6 +3,7 @@ import bg from "../assets/ith_bg.jpg";
 import logo from "../assets/logo.png";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import api from "../utils/axiosConfig";
 
 function RegisterPage() {
   const navigate = useNavigate();
@@ -36,16 +37,12 @@ function RegisterPage() {
     setLoading(true);
 
     try {
-      const response = await fetch( import.meta.env.VITE_API_URL + '/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const response = await api.post( '/api/register', {
         name: formData.name, 
         email: formData.email,
         role: formData.role, 
         nim: formData.nim,
         password: formData.password
-        })
       });
       
       const data = await response.json();
