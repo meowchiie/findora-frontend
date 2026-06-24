@@ -47,7 +47,7 @@ function RegisterPage() {
       
       const data = await response.json();
 
-      if (response.ok) {
+      if (response.status === 201) {
         alert("Registrasi Berhasil! Silakan Login.");
         navigate('/login');
       } else {
