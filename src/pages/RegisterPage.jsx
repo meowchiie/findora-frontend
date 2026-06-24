@@ -40,7 +40,7 @@ function RegisterPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-        name: formData.nama, 
+        name: formData.name, 
         email: formData.email,
         role: formData.role, 
         nim: formData.nim,
